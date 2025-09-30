@@ -164,7 +164,7 @@ npm run build
 # --- PM2 Setup ---
 echo "Setting up PM2..."
 npm install pm2 -g
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 pm2 startup
 pm2 save
 
