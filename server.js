@@ -4,6 +4,9 @@ import http from 'http';
 import pkg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const { Pool } = pkg;
 
