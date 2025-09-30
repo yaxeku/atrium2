@@ -103,6 +103,7 @@ server {
 EOF
 
 sudo ln -sf /etc/nginx/sites-available/atrium /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl restart nginx
 

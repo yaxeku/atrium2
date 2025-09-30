@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS public.guildsettings CASCADE;
 DROP TABLE IF EXISTS public.admins CASCADE;
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: users; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.users (
@@ -22,11 +22,8 @@ CREATE TABLE public.users (
     guild text
 );
 
-
-ALTER TABLE public.users OWNER TO postgres;
-
 --
--- Name: guilddomains; Type: TABLE; Schema: public; Owner: postgres
+-- Name: guilddomains; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.guilddomains (
@@ -36,11 +33,8 @@ CREATE TABLE public.guilddomains (
     guild text
 );
 
-
-ALTER TABLE public.guilddomains OWNER TO postgres;
-
 --
--- Name: guilddomains_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: guilddomains_id_seq; Type: SEQUENCE; Schema: public
 --
 
 CREATE SEQUENCE public.guilddomains_id_seq
@@ -51,18 +45,15 @@ CREATE SEQUENCE public.guilddomains_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
-ALTER TABLE public.guilddomains_id_seq OWNER TO postgres;
-
 --
--- Name: guilddomains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: guilddomains_id_seq; Type: SEQUENCE OWNED BY; Schema: public
 --
 
 ALTER SEQUENCE public.guilddomains_id_seq OWNED BY public.guilddomains.id;
 
 
 --
--- Name: cashouts; Type: TABLE; Schema: public; Owner: postgres
+-- Name: cashouts; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.cashouts (
@@ -75,11 +66,8 @@ CREATE TABLE public.cashouts (
     guild text
 );
 
-
-ALTER TABLE public.cashouts OWNER TO postgres;
-
 --
--- Name: cashouts_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: cashouts_id_seq; Type: SEQUENCE; Schema: public
 --
 
 CREATE SEQUENCE public.cashouts_id_seq
@@ -90,37 +78,27 @@ CREATE SEQUENCE public.cashouts_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
-ALTER TABLE public.cashouts_id_seq OWNER TO postgres;
-
 --
--- Name: cashouts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: cashouts_id_seq; Type: SEQUENCE OWNED BY; Schema: public
 --
 
 ALTER SEQUENCE public.cashouts_id_seq OWNED BY public.cashouts.id;
 
-
-
-
 --
--- Name: guilddomains id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: guilddomains id; Type: DEFAULT; Schema: public
 --
 
 ALTER TABLE ONLY public.guilddomains ALTER COLUMN id SET DEFAULT nextval('public.guilddomains_id_seq'::regclass);
 
 
 --
--- Name: cashouts id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: cashouts id; Type: DEFAULT; Schema: public
 --
 
 ALTER TABLE ONLY public.cashouts ALTER COLUMN id SET DEFAULT nextval('public.cashouts_id_seq'::regclass);
 
-
 --
-
-
---
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.users
@@ -128,7 +106,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: guilddomains guilddomains_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: guilddomains guilddomains_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.guilddomains
@@ -136,18 +114,14 @@ ALTER TABLE ONLY public.guilddomains
 
 
 --
--- Name: cashouts cashouts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cashouts cashouts_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.cashouts
     ADD CONSTRAINT cashouts_pkey PRIMARY KEY (id);
 
-
 --
-
-
---
--- Name: targets; Type: TABLE; Schema: public; Owner: postgres
+-- Name: targets; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.targets (
@@ -160,11 +134,8 @@ CREATE TABLE public.targets (
     belongsto text
 );
 
-
-ALTER TABLE public.targets OWNER TO postgres;
-
 --
--- Name: targets targets_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: targets targets_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.targets
@@ -172,7 +143,7 @@ ALTER TABLE ONLY public.targets
 
 
 --
--- Name: captureddata; Type: TABLE; Schema: public; Owner: postgres
+-- Name: captureddata; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.captureddata (
@@ -182,11 +153,8 @@ CREATE TABLE public.captureddata (
     captureddata jsonb
 );
 
-
-ALTER TABLE public.captureddata OWNER TO postgres;
-
 --
--- Name: captureddata_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: captureddata_id_seq; Type: SEQUENCE; Schema: public
 --
 
 CREATE SEQUENCE public.captureddata_id_seq
@@ -197,25 +165,22 @@ CREATE SEQUENCE public.captureddata_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
-ALTER TABLE public.captureddata_id_seq OWNER TO postgres;
-
 --
--- Name: captureddata_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: captureddata_id_seq; Type: SEQUENCE OWNED BY; Schema: public
 --
 
 ALTER SEQUENCE public.captureddata_id_seq OWNED BY public.captureddata.id;
 
 
 --
--- Name: captureddata id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: captureddata id; Type: DEFAULT; Schema: public
 --
 
 ALTER TABLE ONLY public.captureddata ALTER COLUMN id SET DEFAULT nextval('public.captureddata_id_seq'::regclass);
 
 
 --
--- Name: captureddata captureddata_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: captureddata captureddata_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.captureddata
@@ -223,7 +188,7 @@ ALTER TABLE ONLY public.captureddata
 
 
 --
--- Name: guildsettings; Type: TABLE; Schema: public; Owner: postgres
+-- Name: guildsettings; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.guildsettings (
@@ -233,11 +198,8 @@ CREATE TABLE public.guildsettings (
     telegram_chat_id text
 );
 
-
-ALTER TABLE public.guildsettings OWNER TO postgres;
-
 --
--- Name: guildsettings guildsettings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: guildsettings guildsettings_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.guildsettings
@@ -245,7 +207,7 @@ ALTER TABLE ONLY public.guildsettings
 
 
 --
--- Name: admins; Type: TABLE; Schema: public; Owner: postgres
+-- Name: admins; Type: TABLE; Schema: public
 --
 
 CREATE TABLE public.admins (
@@ -254,11 +216,8 @@ CREATE TABLE public.admins (
     guild text DEFAULT 'default'::text
 );
 
-
-ALTER TABLE public.admins OWNER TO postgres;
-
 --
--- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public
 --
 
 ALTER TABLE ONLY public.admins
