@@ -11,31 +11,6 @@ const saltRounds = 10;
 
 import { pool } from '$lib/db/config';
 
-async function createDefaultAdmin() {
-    const { DEFAULT_ADMIN, DEFAULT_ADMIN_PASSWORD, DEFAULT_ADMIN_GUILD } = process.env;
-
-    if (!DEFAULT_ADMIN || !DEFAULT_ADMIN_PASSWORD || !DEFAULT_ADMIN_GUILD) {
-        console.log('Default admin credentials not found in .env file. Skipping creation.');
-        return;
-    }
-
-    try {
-        const checkQuery = 'SELECT 1 FROM admins WHERE username = $1';
-        const checkResult = await pool.query(checkQuery, [DEFAULT_ADMIN]);
-
-        if (checkResult.rowCount === 0) {
-            const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, saltRounds);
-            const insertQuery = 'INSERT INTO admins (username, password, guild) VALUES ($1, $2, $3)';
-            await pool.query(insertQuery, [DEFAULT_ADMIN, hashedPassword, DEFAULT_ADMIN_GUILD]);
-            console.log('Default admin user created successfully.');
-        }
-    } catch (error) {
-        console.error('Error creating default admin user:', error);
-    }
-}
-
-createDefaultAdmin();
-
 export async function POST({ request, cookies }: RequestEvent) {
     if (!SECRET_KEY) {
         console.error('JWT_SECRET is not defined. Please set it in your .env file.');

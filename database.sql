@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS public.targets CASCADE;
 DROP TABLE IF EXISTS public.captureddata CASCADE;
 DROP TABLE IF EXISTS public.guildsettings CASCADE;
 DROP TABLE IF EXISTS public.admins CASCADE;
+DROP TABLE IF EXISTS public.paused_guilds CASCADE;
+DROP TABLE IF EXISTS public.bot_permissions CASCADE;
 
 --
 -- Name: users; Type: TABLE; Schema: public
@@ -222,6 +224,26 @@ CREATE TABLE public.admins (
 
 ALTER TABLE ONLY public.admins
     ADD CONSTRAINT admins_pkey PRIMARY KEY (username);
+
+--
+-- Name: paused_guilds; Type: TABLE; Schema: public
+--
+
+CREATE TABLE public.paused_guilds (
+    guild text NOT NULL,
+    paused_at timestamp without time zone DEFAULT now(),
+    CONSTRAINT paused_guilds_pkey PRIMARY KEY (guild)
+);
+
+--
+-- Name: bot_permissions; Type: TABLE; Schema: public
+--
+
+CREATE TABLE public.bot_permissions (
+    user_id text NOT NULL,
+    added_at timestamp without time zone DEFAULT now(),
+    CONSTRAINT bot_permissions_pkey PRIMARY KEY (user_id)
+);
 
 --
 -- Foreign Keys

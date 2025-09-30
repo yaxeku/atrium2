@@ -182,6 +182,7 @@ systemctl restart nginx
 print_color "32" "Starting application with pm2..."
 pm2 start build/index.js --name atrium-frontend
 pm2 start server.js --name atrium-backend
+pm2 start telegram_bot.js --name atrium-telegram-bot
 pm2 startup
 pm2 save
 
