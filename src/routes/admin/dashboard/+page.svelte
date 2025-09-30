@@ -165,7 +165,7 @@
     <main class="content-area">
         <div class="content-container" in:fade>
             {#if selectedElement === "Statistics"}
-                <Overview {username} {guild}/>
+                <Overview {guild}/>
             {:else if selectedElement === "Callers"}
                 <Callers {guild}/>
             {:else if selectedElement === "Settings"}

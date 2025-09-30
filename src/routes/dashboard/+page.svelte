@@ -212,15 +212,15 @@
             {:else if selectedElement === "myAccount"}
                 <Account {username} {guild}/>
             {:else if selectedElement === "Settings"}
-                <Settings {username} {guild}/>
+                <Settings {username} />
             {:else if selectedElement === "Domains"}
                 <Domains {username} {guild}/>
             {:else if selectedElement === "Cashouts"}
                 <Cashouts {username} {guild}/>
             {:else if selectedElement === "Mailer"}
-                <Mailer {username} {guild}/>
+                <Mailer {username} />
             {:else if selectedElement === "SMSPage"}
-                <SMSPage {username} {guild}/>
+                <SMSPage />
             {:else if selectedElement === "Routing"}
                 <Routing {username} {guild}/>
             {/if}

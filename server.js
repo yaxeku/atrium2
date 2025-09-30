@@ -8,17 +8,31 @@ import cors from 'cors';
 const { Pool } = pkg;
 
 // Configure your database connection
-const pool = new Pool({
+const dbConfig = {
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
-});
+};
+
+// Validate that all required environment variables are set
+const requiredDbVars = ['DB_USER', 'DB_HOST', 'DB_DATABASE', 'DB_PASSWORD', 'DB_PORT'];
+const unsetVars = requiredDbVars.filter(v => !process.env[v]);
+
+if (unsetVars.length > 0) {
+  console.error(`Error: Missing required database environment variables: ${unsetVars.join(', ')}`);
+  process.exit(1);
+}
+
+const pool = new Pool(dbConfig);
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Restrict to frontend URL
+  methods: ["GET", "POST"]
+}));
 
 // Simple API endpoint to retrieve targets by username
 app.get('/api/targets/:username', async (req, res) => {
@@ -28,15 +42,15 @@ app.get('/api/targets/:username', async (req, res) => {
     const result = await pool.query('SELECT * FROM targets WHERE belongsto = $1', [username]);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error('Detailed error:', err);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
   }
 });
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust this if you have a specific frontend origin
+    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Restrict to frontend URL
     methods: ["GET", "POST"]
   }
 });
@@ -92,7 +106,7 @@ io.on('connection', (socket) => {
 
     // Generate unique ID for the target
     const targetID = uuidv4();
-    const start_page = "test"
+    const start_page = process.env.START_PAGE || "account_review";
     // Derive IP address from the connection (may show "::1" for localhost)
     const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '0.0.0.0';
 
@@ -124,7 +138,7 @@ io.on('connection', (socket) => {
       io.to(belongsto).emit('targetAdded', newTargetData);
 
     } catch (err) {
-      console.error('Error inserting target into database:', err);
+        console.error('Error inserting target into database:', err);
     }
   });
 
@@ -151,7 +165,9 @@ io.on('connection', (socket) => {
         console.log(`Removed target ${tid} from list`);
         // Update the database to mark target as Offline
         pool.query('UPDATE targets SET status = $1 WHERE id = $2', ['Offline', tid])
-          .catch(err => console.error('Error updating target status:', err));
+            .catch(err => {
+                console.error('Error updating target status:', err);
+            });
         break;
       }
     }

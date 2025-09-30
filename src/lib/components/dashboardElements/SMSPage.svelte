@@ -1,7 +1,4 @@
 <script lang="ts">
-    export let username: string;
-    export let guild: string;
-
     import { fade, scale, slide } from 'svelte/transition';
     import { elasticOut } from 'svelte/easing';
     import placeholderImage from '$lib/previews/placeholder.png';
@@ -78,8 +75,6 @@
         try {
             // SMS sending logic here
             console.log("Sending SMS with template:", selectedTemplate, "to number:", phoneNumber);
-            // Example of how you might call an API endpoint to send the SMS:
-            /*
             const response = await fetch('/api/send-sms', {
                 method: 'POST',
                 headers: {
@@ -88,15 +83,12 @@
                 body: JSON.stringify({
                     to: phoneNumber,
                     template: selectedTemplate,
-                    // any other data your API endpoint needs
                 })
             });
 
             if (!response.ok) {
-                // Handle error
                 console.error('Failed to send SMS');
             }
-            */
         } finally {
             isSubmitting = false;
         }

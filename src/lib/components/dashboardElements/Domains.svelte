@@ -200,7 +200,7 @@
                 <span class="material-icons">{modalSuccess ? 'check_circle' : 'error'}</span>
                 <span class="message">{modalMessage}</span>
             </div>
-            <div class="progress-bar" />
+            <div class="progress-bar"></div>
         </div>
     </div>
 {/if}
@@ -244,14 +244,14 @@
                     {#if page.Template == "Coinbase"}
                     <td>
                         <div class="logoHolder">
-                            <img src={Coinbase} height="15em" width="15em">
+                            <img src={Coinbase} height="15em" width="15em" alt="Coinbase">
                             {page.Template}
                         </div>
                     </td>
                     {:else if page.Template == "Gemini"}
                     <td>
                         <div class="logoHolder">
-                            <img src={Gemini} height="15em" width="15em">
+                            <img src={Gemini} height="15em" width="15em" alt="Gemini">
                             {page.Template}
                         </div>
                     </td>
@@ -304,18 +304,6 @@
 </div>
 
 <style>
-    .modal {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1em 2em;
-        border-radius: 8px;
-        color: white;
-        font-weight: bold;
-        animation: slideIn 0.3s ease-out;
-        z-index: 1000;
-    }
-
     @keyframes slideIn {
         from {
             transform: translateX(100%);

@@ -1519,35 +1519,6 @@
         font-size: 0.9em;
     }
 
-    .styled-select {
-        width: 100%;
-        padding: 1em;
-        background: #1a1a1a;
-        border: 1px solid #39A04D;
-        border-radius: 0.8em;
-        color: #4CF485;
-        font-family: 'DM Sans', sans-serif;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .styled-select:hover {
-        border-color: #4CF485;
-        box-shadow: 0 0 15px rgba(76, 244, 133, 0.2);
-    }
-
-    .styled-select optgroup {
-        background: #1a1a1a;
-        color: #8b8b8b;
-        font-weight: 500;
-    }
-
-    .styled-select option {
-        background: #1a1a1a;
-        color: #4CF485;
-        padding: 0.8em;
-    }
-
     .info-panel {
         display: flex;
         flex-direction: column;
@@ -1770,12 +1741,6 @@
         object-fit: contain;
         border-radius: 0.8em;
         box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-
-    .button-group {
-        display: flex;
-        gap: 1em;
-        margin-bottom: 1em;
     }
 
     .custom-url-btn {

@@ -2,10 +2,12 @@ import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
 const SECRET_KEY = process.env.JWT_SECRET;
+const saltRounds = 10;
 
 import { pool } from '$lib/db/config';
 
@@ -22,8 +24,9 @@ async function createDefaultAdmin() {
         const checkResult = await pool.query(checkQuery, [DEFAULT_ADMIN]);
 
         if (checkResult.rowCount === 0) {
+            const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, saltRounds);
             const insertQuery = 'INSERT INTO admins (username, password, guild) VALUES ($1, $2, $3)';
-            await pool.query(insertQuery, [DEFAULT_ADMIN, DEFAULT_ADMIN_PASSWORD, DEFAULT_ADMIN_GUILD]);
+            await pool.query(insertQuery, [DEFAULT_ADMIN, hashedPassword, DEFAULT_ADMIN_GUILD]);
             console.log('Default admin user created successfully.');
         }
     } catch (error) {
@@ -52,7 +55,9 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         const dbPassword = result.rows[0].password;
 
-        if (passWord !== dbPassword) {
+        const passwordMatch = await bcrypt.compare(passWord, dbPassword);
+
+        if (!passwordMatch) {
             return json({ success: false, error: 'Invalid username or password' }, { status: 401 });
         }
 

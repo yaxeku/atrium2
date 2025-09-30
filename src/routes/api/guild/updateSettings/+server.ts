@@ -36,6 +36,23 @@ export async function POST({ request }: RequestEvent) {
             } else {
                 console.log('Updated existing row:', updateResult.rows[0]);
             }
+        } else if (setting === 'telegram') {
+            const { token, chatId } = value;
+            const updateResult = await pool.query(
+                `UPDATE GUILDSETTINGS
+                 SET telegram_bot_token = $2, telegram_chat_id = $3
+                 WHERE guild = $1
+                 RETURNING *`,
+                [guild, token, chatId]
+            );
+
+            if (updateResult.rowCount === 0) {
+                await pool.query(
+                    `INSERT INTO GUILDSETTINGS (guild, telegram_bot_token, telegram_chat_id)
+                     VALUES ($1, $2, $3)`,
+                    [guild, token, chatId]
+                );
+            }
         }
 
         return json({ success: true });
@@ -53,4 +70,4 @@ export async function POST({ request }: RequestEvent) {
             detail: error.message
         }, { status: 500 });
     }
-} 
+}

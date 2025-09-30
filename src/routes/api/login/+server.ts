@@ -3,6 +3,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import jwt from 'jsonwebtoken';
 import { pool } from '$lib/db/config';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
@@ -28,7 +29,9 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         const dbPassword = result.rows[0].password;
 
-        if (passWord !== dbPassword) {
+        const passwordMatch = await bcrypt.compare(passWord, dbPassword);
+
+        if (!passwordMatch) {
             return json({ success: false, error: 'Invalid username or password' }, { status: 401 });
         }
 

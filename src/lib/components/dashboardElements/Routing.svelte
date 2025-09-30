@@ -3,8 +3,8 @@
     import { flip } from 'svelte/animate';
     import { onMount } from 'svelte';
 
-    export let username;
-    export let guild;
+    export let username: string;
+    export let guild: string;
     
     import pageConfigurations from '$lib/data/pageConfigurations.json';
     

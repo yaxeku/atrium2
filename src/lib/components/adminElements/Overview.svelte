@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { fade, slide, scale } from 'svelte/transition';
-    export let username: string;
     export let guild: string;
     
     import Coinbase from "$lib/images/coinbase-v2.svg"

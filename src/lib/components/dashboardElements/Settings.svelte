@@ -1,11 +1,40 @@
 <script lang="ts">
     export let username: string;
-    export let guild: string;
     let selectedFile: File | null = null;
     let audioUrl: string | null = null;
     let audio: HTMLAudioElement | null = null;
     let soundName: string = '';
     let uploadStatus: string = '';
+    let botToken: string = '';
+    let chatId: string = '';
+
+    async function updateTelegramSettings() {
+        try {
+            const response = await fetch('/api/guild/updateSettings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    guild: 'default', // Replace with actual guild if available
+                    setting: 'telegram',
+                    value: {
+                        token: botToken,
+                        chatId: chatId
+                    }
+                })
+            });
+
+            if (response.ok) {
+                alert('Telegram settings updated successfully!');
+            } else {
+                alert('Failed to update Telegram settings');
+            }
+        } catch (error) {
+            console.error('Error updating Telegram settings:', error);
+            alert('Error updating Telegram settings');
+        }
+    }
 
     function handleFileSelect(event: Event) {
         const input = event.target as HTMLInputElement;
@@ -82,10 +111,10 @@
             <h2 class="white">Telegram Settings</h2>
             <p>You can setup the telegram bot notifications here. The notifications are shown upon connection and receiving the seed.</p>
             <label for="bot-token">Telegram Bot Token</label>
-            <input id="bot-token">
+            <input id="bot-token" bind:value={botToken}>
             <label for="chat-id">Telegram Chat ID</label>
-            <input id="chat-id">
-            <button>Update</button>
+            <input id="chat-id" bind:value={chatId}>
+            <button on:click={updateTelegramSettings}>Update</button>
         </div>
         <div class="container">
             <h2 class="white">Notification Sound</h2>
