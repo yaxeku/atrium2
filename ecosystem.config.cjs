@@ -1,3 +1,11 @@
+const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
+
+// Load environment variables from .env file
+const envPath = path.resolve(__dirname, '.env');
+const envConfig = fs.existsSync(envPath) ? dotenv.parse(fs.readFileSync(envPath)) : {};
+
 module.exports = {
   apps: [
     {
@@ -13,11 +21,11 @@ module.exports = {
       name: 'atrium-backend',
       script: 'server.js',
       cwd: __dirname,
+      // Manually merge the environment variables
       env: {
+        ...envConfig,
         NODE_ENV: 'production',
       },
-      // Tell PM2 to load variables from .env
-      env_file: '.env',
     },
   ],
 };
