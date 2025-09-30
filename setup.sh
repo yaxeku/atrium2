@@ -4,9 +4,9 @@
 set -e
 
 # --- Configuration ---
-DB_USER="xekupanel"
+DB_USER="postgres"
 #DB_PASS=$(openssl rand -hex 12) # Generate a random password
-DB_PASS=!xekupanel! # For simplicity, using a fixed password. Change as needed.
+DB_PASS=xekupanel # For simplicity, using a fixed password. Change as needed.
 DB_NAME="xekupanel"
 DOMAIN="cbinfodesk.shop" # Replace with your actual domain
 GIT_REPO="https://github.com/yaxeku/atrium2.git"
