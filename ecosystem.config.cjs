@@ -3,6 +3,7 @@ module.exports = {
     {
       name: 'atrium-frontend',
       script: 'build/index.js',
+      cwd: __dirname,
       env: {
         PORT: 3001,
         NODE_ENV: 'production',
@@ -11,6 +12,7 @@ module.exports = {
     {
       name: 'atrium-backend',
       script: 'server.js',
+      cwd: __dirname,
       env: {
         NODE_ENV: 'production',
       },
