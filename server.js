@@ -1,17 +1,12 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import { Server } from 'socket.io';
 import http from 'http';
 import pkg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const { Pool } = pkg;
 
@@ -182,6 +177,7 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(3000, '0.0.0.0', () => {
-  console.log('Server listening on port 3000');
+const backendPort = process.env.BACKEND_PORT || 3001;
+server.listen(backendPort, '0.0.0.0', () => {
+  console.log(`Server listening on port ${backendPort}`);
 });
