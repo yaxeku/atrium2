@@ -73,7 +73,7 @@
     <div class="loadingLogo">
         <img src={bootstrap} alt="Logo" />
         <div class="loading-text">
-            <h1>Eulen<span class="accent">.</span></h1>
+            <h1>Xekku Panel<span class="accent">.</span></h1>
             <p class="user-badge">DASHBOARD</p>
         </div>
     </div>
@@ -85,7 +85,7 @@
         <div class="logo-section">
             <img src={bootstrap} alt="Logo" />
             <div class="brand">
-                <h1>Eulen<span class="accent">.</span></h1>
+                <h1>Xekku Panel<span class="accent">.</span></h1>
                 <div class="user-tag">{username}</div>
             </div>
         </div>

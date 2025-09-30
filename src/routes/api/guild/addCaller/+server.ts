@@ -3,6 +3,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { pool } from '$lib/db/config';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
@@ -41,13 +42,16 @@ export async function POST({ request }: RequestEvent) {
             return json({ success: false, error: 'Missing required parameters' }, { status: 400 });
         }
 
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
         const query = `
             INSERT INTO USERS (username, userid, password, rank, starting_page, guild)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
 
-        const result = await pool.query(query, [username, userid, password, rank, starting_page, guild]);
+        const result = await pool.query(query, [username, userid, hashedPassword, rank, starting_page, guild]);
 
         return json({
             success: true,

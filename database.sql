@@ -213,6 +213,7 @@ ALTER TABLE ONLY public.guildsettings
 --
 
 CREATE TABLE public.admins (
+    userid uuid NOT NULL,
     username text NOT NULL,
     password text, -- Should store a salted hash, not plain text
     guild text DEFAULT 'default'::text
@@ -223,7 +224,14 @@ CREATE TABLE public.admins (
 --
 
 ALTER TABLE ONLY public.admins
-    ADD CONSTRAINT admins_pkey PRIMARY KEY (username);
+    ADD CONSTRAINT admins_pkey PRIMARY KEY (userid);
+
+--
+-- Name: admins admins_username_key; Type: CONSTRAINT; Schema: public
+--
+
+ALTER TABLE ONLY public.admins
+    ADD CONSTRAINT admins_username_key UNIQUE (username);
 
 --
 -- Name: paused_guilds; Type: TABLE; Schema: public

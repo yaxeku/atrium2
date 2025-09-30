@@ -64,8 +64,9 @@ if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $PG_DB; then
     sudo -u postgres psql -c "CREATE DATABASE $PG_DB OWNER $PG_USER;"
 fi
 
-# Import the database schema
-print_color "32" "Importing database schema..."
+# Clear existing data and import the database schema
+print_color "32" "Clearing database and importing schema..."
+sudo -u postgres psql -d $PG_DB -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 sudo -u postgres psql -d $PG_DB < database.sql
 
 # --- Application Setup ---

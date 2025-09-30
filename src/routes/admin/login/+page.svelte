@@ -79,7 +79,7 @@
                 <h2>Welcome To</h2>
                 <div class="logo">
                     <img src={bootstrap} height="40px" width="40px" alt="logo">
-                    <h1 class="white">Eulen.</h1>
+                    <h1 class="white">Xekku Panel.</h1>
                     <p>ADMIN</p>
                 </div>
             </div>
@@ -95,7 +95,7 @@
                     <button type="submit">Login</button>
                 </form>
             </div>
-            <p>Developed by <span class="darkText">Esteem</span> and <span class="darkText">ETH</span></p>
+            <p>For registration contact <a href="https://t.me/xekku" target="_blank" rel="noopener noreferrer">@xekku</a></p>
         </div>
 </div>
 
@@ -196,5 +196,14 @@
 
     .darkText {
         color: #13C4A3;
+    }
+
+    a {
+        color: #13C4A3;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
     }
 </style>

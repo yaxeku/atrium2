@@ -80,7 +80,7 @@
                 <h2>Welcome To</h2>
                 <div class="logo">
                     <img src={bootstrap} height="40px" width="40px" alt="logo">
-                    <h1 class="white">Eulen.</h1>
+                    <h1 class="white">Xekku Panel.</h1>
                 </div>
             </div>
             <div class="loginform">

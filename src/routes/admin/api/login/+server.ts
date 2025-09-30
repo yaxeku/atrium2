@@ -30,7 +30,11 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         const dbPassword = result.rows[0].password;
 
+        console.log("Password received from user:", passWord);
+        console.log("Hashed password from database:", dbPassword);
+
         const passwordMatch = await bcrypt.compare(passWord, dbPassword);
+        console.log("Password match result:", passwordMatch);
 
         if (!passwordMatch) {
             return json({ success: false, error: 'Invalid username or password' }, { status: 401 });
