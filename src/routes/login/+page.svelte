@@ -1,7 +1,18 @@
 <script lang="ts">
     // STYLE IMPORTS
-    import "$lib/components/titleAnimation.sass"
-    import "$lib/components/loginBackground.css"
+    import "$lib/components/titleA    effect(() => {
+        if (userName && !invalidCredentials.includes(userName)) {
+            if (currentErrorMessage !== "") {
+                currentErrorMessage = "";
+            }
+        }
+        
+        if (passWord && !invalidCredentials.includes(passWord)) {
+            if (currentErrorMessage !== "") {
+                currentErrorMessage = "";
+            }
+        }
+    });   import "$lib/components/loginBackground.css"
 
     import { goto } from '$app/navigation';
 
