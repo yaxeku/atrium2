@@ -1,12 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import { JWT_SECRET } from '$env/dynamic/private';
 import bcrypt from 'bcrypt';
 
-dotenv.config();
-
-const SECRET_KEY = process.env.JWT_SECRET;
+const SECRET_KEY = JWT_SECRET;
 const saltRounds = 10;
 
 import { pool } from '$lib/db/config';
