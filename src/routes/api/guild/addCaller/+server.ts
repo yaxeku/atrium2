@@ -2,12 +2,10 @@ import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import { pool } from '$lib/db/config';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import { PRIVATE_JWT_SECRET } from '$env/dynamic/private';
 import bcrypt from 'bcrypt';
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = PRIVATE_JWT_SECRET;
 
 export async function POST({ request }: RequestEvent) {
     if (!JWT_SECRET) {

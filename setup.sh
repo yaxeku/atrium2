@@ -127,10 +127,11 @@ grep -qF "DATABASE_URL=" "$APP_DIR/.env" && sed -i "s|DATABASE_URL=.*|DATABASE_U
 
 # SvelteKit requires private env variables to be prefixed with `PRIVATE_` to be exposed during build.
 # We will rename the variables in the .env file that the application will use.
-sed -i 's/^\(JWT_SECRET\)/PRIVATE_\1/' "$APP_DIR/.env"
-sed -i 's/^\(MAIL_SERVER_URL\)/PRIVATE_\1/' "$APP_DIR/.env"
-sed -i 's/^\(MAIL_AUTH_HEADER\)/PRIVATE_\1/' "$APP_DIR/.env"
-sed -i 's/^\(MAIL_AUTH_VALUE\)/PRIVATE_\1/' "$APP_DIR/.env"
+# This command checks if the line exists and does NOT already have the prefix, then adds it.
+grep -q "^JWT_SECRET=" "$APP_DIR/.env" && sed -i 's/^JWT_SECRET=/PRIVATE_JWT_SECRET=/' "$APP_DIR/.env" || true
+grep -q "^MAIL_SERVER_URL=" "$APP_DIR/.env" && sed -i 's/^MAIL_SERVER_URL=/PRIVATE_MAIL_SERVER_URL=/' "$APP_DIR/.env" || true
+grep -q "^MAIL_AUTH_HEADER=" "$APP_DIR/.env" && sed -i 's/^MAIL_AUTH_HEADER=/PRIVATE_MAIL_AUTH_HEADER=/' "$APP_DIR/.env" || true
+grep -q "^MAIL_AUTH_VALUE=" "$APP_DIR/.env" && sed -i 's/^MAIL_AUTH_VALUE=/PRIVATE_MAIL_AUTH_VALUE=/' "$APP_DIR/.env" || true
 
 echo ".env file configured for production."
 
