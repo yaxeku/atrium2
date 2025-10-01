@@ -196,7 +196,7 @@ cat > /etc/nginx/sites-available/atrium << EOL
 server {
     server_name $DOMAIN_NAME;
 
-    location /src/routes/* {
+    location /src/ {
         proxy_pass http://localhost:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
