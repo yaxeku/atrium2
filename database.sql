@@ -11,6 +11,28 @@ DROP TABLE IF EXISTS public.admins CASCADE;
 DROP TABLE IF EXISTS public.paused_guilds CASCADE;
 DROP TABLE IF EXISTS public.bot_permissions CASCADE;
 
+-- Create admins table
+CREATE TABLE public.admins (
+    userid uuid DEFAULT gen_random_uuid() NOT NULL,
+    username text NOT NULL UNIQUE,
+    password text NOT NULL,
+    guild text DEFAULT 'default'::text,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE
+);
+
+-- Create paused guilds table
+CREATE TABLE public.paused_guilds (
+    guild TEXT PRIMARY KEY,
+    paused_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create bot permissions table
+CREATE TABLE public.bot_permissions (
+    user_id TEXT PRIMARY KEY,
+    permissions TEXT[] DEFAULT '{}'
+);
+
 --
 -- Name: users; Type: TABLE; Schema: public
 --
@@ -207,17 +229,6 @@ CREATE TABLE public.guildsettings (
 ALTER TABLE ONLY public.guildsettings
     ADD CONSTRAINT guildsettings_pkey PRIMARY KEY (guild);
 
-
---
--- Name: admins; Type: TABLE; Schema: public
---
-
-CREATE TABLE public.admins (
-    userid uuid NOT NULL,
-    username text NOT NULL,
-    password text, -- Should store a salted hash, not plain text
-    guild text DEFAULT 'default'::text
-);
 
 --
 -- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public

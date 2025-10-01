@@ -110,76 +110,153 @@ fi
 function setup_postgresql {
     print_color "36" "Setting up PostgreSQL..."
     
-    # Install PostgreSQL if not present
-    if ! check_command "psql"; then
-        print_color "33" "Installing PostgreSQL..."
-        apt-get install -y postgresql postgresql-contrib || {
-            print_color "31" "Failed to install PostgreSQL. Exiting."
-            exit 1
+    # Install PostgreSQL and its dependencies
+    print_color "33" "Installing PostgreSQL and required packages..."
+    apt-get update
+    apt-get install -y postgresql postgresql-contrib || {
+        print_color "31" "Failed to install PostgreSQL. Exiting."
+        exit 1
+    }
+
+    # Configure PostgreSQL authentication
+    print_color "33" "Configuring PostgreSQL authentication..."
+    PG_HBA_FILE=$(find /etc/postgresql -name "pg_hba.conf")
+    if [ -f "$PG_HBA_FILE" ]; then
+        # Backup original config
+        cp "$PG_HBA_FILE" "${PG_HBA_FILE}.bak"
+        # Update authentication methods
+        sed -i 's/local.*all.*all.*peer/local   all             all                                     md5/' "$PG_HBA_FILE"
+        sed -i 's/host.*all.*all.*127.0.0.1\/32.*scram-sha-256/host    all             all             127.0.0.1\/32            md5/' "$PG_HBA_FILE"
+        print_color "32" "PostgreSQL authentication configured successfully"
+        
+        # Reload PostgreSQL to apply authentication changes
+        print_color "33" "Reloading PostgreSQL configuration..."
+        systemctl reload postgresql || {
+            print_color "31" "Failed to reload PostgreSQL. Attempting restart..."
+            systemctl restart postgresql || {
+                print_color "31" "Failed to restart PostgreSQL. Exiting."
+                exit 1
+            }
         }
+    else
+        print_color "31" "Could not find pg_hba.conf. Please check your PostgreSQL installation."
+        exit 1
     fi
 
-    # Ensure PostgreSQL is running
+    # Start PostgreSQL service
+    print_color "33" "Starting PostgreSQL service..."
     systemctl start postgresql || {
-        print_color "31" "Failed to start PostgreSQL. Exiting."
+        print_color "31" "Failed to start PostgreSQL service. Exiting."
         exit 1
     }
 
     # Wait for PostgreSQL to be ready
     print_color "33" "Waiting for PostgreSQL to be ready..."
     for i in {1..30}; do
-        if sudo -u postgres psql -c "\l" >/dev/null 2>&1; then
+        if sudo -u postgres pg_isready &>/dev/null; then
             break
         fi
         sleep 1
     done
 
-    # Create user if it doesn't exist
-    if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
-        print_color "33" "Creating database user ${DB_USER}..."
-        sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';" || {
-            print_color "31" "Failed to create database user. Exiting."
-            exit 1
-        }
-    fi
+    # Ensure the database user exists with the correct password and privileges
+    print_color "33" "Setting up database user..."
+    sudo -u postgres psql -c "DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${DB_USER}') THEN
+            CREATE USER ${DB_USER} WITH SUPERUSER LOGIN PASSWORD '${DB_PASSWORD}';
+        ELSE
+            ALTER USER ${DB_USER} WITH SUPERUSER LOGIN PASSWORD '${DB_PASSWORD}';
+        END IF;
+    END
+    \$\$;" || {
+        print_color "31" "Failed to create/update database user. Exiting."
+        exit 1
+    }
 
-    # Drop database if it exists
+    # Drop and recreate the database
     print_color "33" "Dropping existing database if it exists..."
     sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_DATABASE};" || {
         print_color "31" "Failed to drop existing database. Exiting."
         exit 1
     }
 
-    # Create database
-    print_color "33" "Creating database ${DB_DATABASE}..."
-    sudo -u postgres psql -c "CREATE DATABASE ${DB_DATABASE};" || {
+    print_color "33" "Creating fresh database..."
+    sudo -u postgres psql -c "CREATE DATABASE ${DB_DATABASE} OWNER ${DB_USER};" || {
         print_color "31" "Failed to create database. Exiting."
         exit 1
     }
 
-    # Grant privileges
-    print_color "33" "Granting privileges to ${DB_USER}..."
+    # Grant necessary privileges
+    print_color "33" "Setting up database privileges..."
     sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_DATABASE} TO ${DB_USER};" || {
         print_color "31" "Failed to grant privileges. Exiting."
+        exit 1
+    }
+
+    # Grant schema-level privileges
+    print_color "33" "Setting up schema privileges..."
+    sudo -u postgres psql -d ${DB_DATABASE} -c "GRANT ALL ON SCHEMA public TO ${DB_USER};
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${DB_USER};
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${DB_USER};
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO ${DB_USER};
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TYPES TO ${DB_USER};" || {
+        print_color "31" "Failed to grant schema privileges. Exiting."
         exit 1
     }
 
     # Initialize database schema
     if [ -f "database.sql" ]; then
         print_color "33" "Initializing database schema..."
-        PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USER} -d ${DB_DATABASE} -f database.sql || {
-            print_color "31" "Failed to initialize database schema. Exiting."
+        PGPASSWORD="${DB_PASSWORD}" psql -h localhost -U "${DB_USER}" -d "${DB_DATABASE}" -f database.sql || {
+            print_color "31" "Failed to initialize database schema. Please check database.sql for errors."
             exit 1
         }
+        print_color "32" "Database schema initialized successfully!"
+
+        # Verify user privileges after schema initialization
+        print_color "33" "Verifying user privileges..."
+        sudo -u postgres psql -d ${DB_DATABASE} -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO ${DB_USER};
+            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ${DB_USER};
+            GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO ${DB_USER};
+            ALTER USER ${DB_USER} WITH LOGIN SUPERUSER;" || {
+            print_color "31" "Failed to verify user privileges. Please check permissions manually."
+            exit 1
+        }
+        print_color "32" "User privileges verified successfully!"
     else
-        print_color "31" "database.sql not found. Skipping schema initialization."
+        print_color "31" "database.sql not found! Please ensure the file exists."
+        exit 1
     fi
 
     print_color "32" "PostgreSQL setup completed successfully!"
 }
 
+# Install required npm packages
+print_color "36" "Installing npm packages..."
+npm install || {
+    print_color "31" "Failed to install npm packages. Exiting."
+    exit 1
+}
+
+# Ensure specific version of dotenv is installed
+npm install dotenv@17.2.2 || {
+    print_color "31" "Failed to install dotenv package. Exiting."
+    exit 1
+}
+
 # Run PostgreSQL setup
 setup_postgresql
+
+if ! check_command "pm2"; then
+    print_color "33" "Installing pm2..."
+    npm install -g pm2 || {
+        print_color "31" "Failed to install pm2. Exiting."
+        exit 1
+    }
+fi
+
+
 
 if ! check_command "pm2"; then
     print_color "33" "Installing pm2..."

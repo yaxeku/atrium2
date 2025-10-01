@@ -23,3 +23,19 @@ pm2 logs
 
 # Check system logs for port conflicts
 sudo journalctl -xe
+
+
+rm -rf node_modules package-lock.json
+npm install --legacy-peer-deps
+
+
+# Stop all PM2 processes
+pm2 stop all
+
+# Initialize the database
+sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_DATABASE};"
+sudo -u postgres psql -c "CREATE DATABASE ${DB_DATABASE} OWNER ${DB_USER};"
+PGPASSWORD="${DB_PASSWORD}" psql -h localhost -U "${DB_USER}" -d "${DB_DATABASE}" -f database.sql
+
+# Restart all PM2 processes
+pm2 restart all

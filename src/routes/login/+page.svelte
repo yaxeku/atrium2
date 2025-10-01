@@ -26,11 +26,32 @@
 
     async function handleLogin(event: SubmitEvent) {
         event.preventDefault();
-        console.log("USER: " + userName);
-        console.log("PASS: " + passWord);
+        try {
+            currentErrorMessage = '';
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userName, passWord })
+            });
 
-        const response = await fetch('/api/login', {
-            method: 'POST',
+            const data = await response.json();
+
+            if (response.ok) {
+                // Successful login
+                localStorage.setItem('authToken', data.token);
+                goto('/dashboard');
+            } else {
+                // Failed login
+                errorMsgIndex = (errorMsgIndex + 1) % errorMessages.length;
+                currentErrorMessage = data.error || errorMessages[errorMsgIndex];
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            currentErrorMessage = 'Failed to connect to the server. Please try again.';
+        }
+    }
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userName, passWord }),
         });

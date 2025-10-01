@@ -18,7 +18,11 @@ export async function POST({ request, cookies }: RequestEvent) {
     try {
         const { userName, passWord } = await request.json();
 
-        const query = 'SELECT password FROM users WHERE username = $1';
+        if (!userName || !passWord) {
+            return json({ success: false, error: 'Username and password are required' }, { status: 400 });
+        }
+
+        const query = 'SELECT password, guild FROM users WHERE username = $1';
         const values = [userName];
 
         const result = await pool.query(query, values);
@@ -27,13 +31,9 @@ export async function POST({ request, cookies }: RequestEvent) {
             return json({ success: false, error: 'Invalid username or password' }, { status: 401 });
         }
 
-        const dbPassword = result.rows[0].password;
-
-        console.log("Password received from user:", passWord);
-        console.log("Hashed password from database:", dbPassword);
+        const { password: dbPassword, guild } = result.rows[0];
 
         const passwordMatch = await bcrypt.compare(passWord, dbPassword);
-        console.log("Password match result:", passwordMatch);
 
         if (!passwordMatch) {
             return json({ success: false, error: 'Invalid username or password' }, { status: 401 });
