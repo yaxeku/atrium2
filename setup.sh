@@ -75,6 +75,15 @@ print_color "32" "Setting up the application..."
 npm install
 npm run build
 
+# --- Firewall Configuration ---
+print_color "32" "Configuring firewall..."
+apt-get install -y ufw
+ufw allow 22/tcp # Allow SSH
+ufw allow 80/tcp # Allow HTTP
+ufw allow 443/tcp # Allow HTTPS
+ufw --force enable
+print_color "32" "Firewall enabled and configured."
+
 # --- Nginx Configuration ---
 print_color "32" "Configuring Nginx..."
 read -p "Please enter the domain name for this server (e.g., example.com): " DOMAIN
@@ -84,45 +93,36 @@ if [ -z "$DOMAIN" ]; then
 fi
 cat > /etc/nginx/sites-available/atrium <<EOL
 server {
-    listen 80;
-    server_name $DOMAIN;
+       server_name $DOMAIN;
 
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
+       location /ws-api/ {
+           proxy_pass http://localhost:3001;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade \$http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host \$host;
+           proxy_cache_bypass \$http_upgrade;
+       }
 
-    location /admin/api {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
+       location /socket.io/ {
+           proxy_pass http://localhost:3001;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade \$http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header Host \$host;
+       }
+       
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade \$http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host \$host;
+           proxy_cache_bypass \$http_upgrade;
+       }
 
-    location /api {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /socket.io {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
+       listen 80; # Listen on port 80 for initial Certbot challenge
+   }
 EOL
 
 ln -sf /etc/nginx/sites-available/atrium /etc/nginx/sites-enabled/
@@ -141,52 +141,43 @@ cat > /etc/nginx/sites-available/atrium <<EOL
 server {
     listen 80;
     server_name $DOMAIN;
+    # Redirect all HTTP traffic to HTTPS
     return 301 https://\$host\$request_uri;
 }
 
 server {
-    listen 443 ssl http2;
-    server_name $DOMAIN;
+       listen 443 ssl;
+       server_name $DOMAIN;
+       
+       ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
 
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+       location /ws-api/ {
+           proxy_pass http://localhost:3001;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade \$http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host \$host;
+           proxy_cache_bypass \$http_upgrade;
+       }
 
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
+       location /socket.io/ {
+           proxy_pass http://localhost:3001;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade \$http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header Host \$host;
+       }
 
-    location /admin/api {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /api {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /socket.io {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade \$http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host \$host;
+           proxy_cache_bypass \$http_upgrade;
+       }
+   }
 EOL
 
 # --- Final Nginx Config Test & Restart ---

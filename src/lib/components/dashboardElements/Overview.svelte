@@ -42,14 +42,14 @@
     }
 
     function copyURL(URL: string) {
-        let copyText = "https://www." + URL + "/?id=" + btoa(username);
+        let copyText = "https://" + URL + "/?id=" + btoa(username);
         navigator.clipboard.writeText(copyText);
         alert("Copied the URL: " + copyText);
     }
 
     onMount(async () => {
         await fetchDomains();
-        const res = await fetch(`https://artofjotlery.ru/socketServer/api/targets/${username}`);
+        const res = await fetch(`/ws-api/targets/${username}`);
         Targets = await res.json();
 
         const cashoutsResponse = await fetch(`/api/guild/getCallerCashouts?guild=${guild}&username=${username}`);
