@@ -101,6 +101,89 @@ fi
 if ! check_command "pm2"; then
     print_color "33" "Installing pm2..."
     npm install -g pm2 || {
+        print_color "31" "Failed to install pm2. Exiting."
+        exit 1
+    }
+fi
+
+# --- PostgreSQL Setup ---
+function setup_postgresql {
+    print_color "36" "Setting up PostgreSQL..."
+    
+    # Install PostgreSQL if not present
+    if ! check_command "psql"; then
+        print_color "33" "Installing PostgreSQL..."
+        apt-get install -y postgresql postgresql-contrib || {
+            print_color "31" "Failed to install PostgreSQL. Exiting."
+            exit 1
+        }
+    fi
+
+    # Ensure PostgreSQL is running
+    systemctl start postgresql || {
+        print_color "31" "Failed to start PostgreSQL. Exiting."
+        exit 1
+    }
+
+    # Wait for PostgreSQL to be ready
+    print_color "33" "Waiting for PostgreSQL to be ready..."
+    for i in {1..30}; do
+        if sudo -u postgres psql -c "\l" >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+
+    # Create user if it doesn't exist
+    if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
+        print_color "33" "Creating database user ${DB_USER}..."
+        sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';" || {
+            print_color "31" "Failed to create database user. Exiting."
+            exit 1
+        }
+    fi
+
+    # Drop database if it exists
+    print_color "33" "Dropping existing database if it exists..."
+    sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_DATABASE};" || {
+        print_color "31" "Failed to drop existing database. Exiting."
+        exit 1
+    }
+
+    # Create database
+    print_color "33" "Creating database ${DB_DATABASE}..."
+    sudo -u postgres psql -c "CREATE DATABASE ${DB_DATABASE};" || {
+        print_color "31" "Failed to create database. Exiting."
+        exit 1
+    }
+
+    # Grant privileges
+    print_color "33" "Granting privileges to ${DB_USER}..."
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_DATABASE} TO ${DB_USER};" || {
+        print_color "31" "Failed to grant privileges. Exiting."
+        exit 1
+    }
+
+    # Initialize database schema
+    if [ -f "database.sql" ]; then
+        print_color "33" "Initializing database schema..."
+        PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USER} -d ${DB_DATABASE} -f database.sql || {
+            print_color "31" "Failed to initialize database schema. Exiting."
+            exit 1
+        }
+    else
+        print_color "31" "database.sql not found. Skipping schema initialization."
+    fi
+
+    print_color "32" "PostgreSQL setup completed successfully!"
+}
+
+# Run PostgreSQL setup
+setup_postgresql
+
+if ! check_command "pm2"; then
+    print_color "33" "Installing pm2..."
+    npm install -g pm2 || {
         print_color "31" "Failed to install pm2. Check if npm is working correctly."
         exit 1
     }
