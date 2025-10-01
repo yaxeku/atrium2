@@ -8,7 +8,7 @@
 		"build": "vite build",
 		"start": "npm run build && concurrently \"node build/index.js\" \"node server.js\" \"npm run bot\"",
 		"preview": "vite preview",
-		"bot": "node telegram_bot.js",
+		"bot": "node bot.js",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",

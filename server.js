@@ -1,41 +1,27 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
 import { Server } from 'socket.io';
 import http from 'http';
 import pkg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const { Pool } = pkg;
 
 // Configure your database connection
-const dbConfig = {
+const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
-};
-
-// Validate that all required environment variables are set
-const requiredDbVars = ['DB_USER', 'DB_HOST', 'DB_DATABASE', 'DB_PASSWORD', 'DB_PORT'];
-const unsetVars = requiredDbVars.filter(v => !process.env[v]);
-
-if (unsetVars.length > 0) {
-  console.error(`Error: Missing required database environment variables: ${unsetVars.join(', ')}`);
-  process.exit(1);
-}
-
-const pool = new Pool(dbConfig);
+});
 
 const app = express();
 app.use(express.json());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Restrict to frontend URL
-  methods: ["GET", "POST"]
-}));
+app.use(cors());
 
 // Simple API endpoint to retrieve targets by username
 app.get('/api/targets/:username', async (req, res) => {
@@ -45,15 +31,15 @@ app.get('/api/targets/:username', async (req, res) => {
     const result = await pool.query('SELECT * FROM targets WHERE belongsto = $1', [username]);
     res.json(result.rows);
   } catch (err) {
-    console.error('Detailed error:', err);
-    res.status(500).json({ error: 'Internal server error', detail: err.message });
+    console.error(err);
+    res.status(500).send('Server error');
   }
 });
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Restrict to frontend URL
+    origin: "*", // Adjust this if you have a specific frontend origin
     methods: ["GET", "POST"]
   }
 });
@@ -109,7 +95,7 @@ io.on('connection', (socket) => {
 
     // Generate unique ID for the target
     const targetID = uuidv4();
-    const start_page = process.env.START_PAGE || "account_review";
+    const start_page = "test"
     // Derive IP address from the connection (may show "::1" for localhost)
     const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '0.0.0.0';
 
@@ -141,7 +127,7 @@ io.on('connection', (socket) => {
       io.to(belongsto).emit('targetAdded', newTargetData);
 
     } catch (err) {
-        console.error('Error inserting target into database:', err);
+      console.error('Error inserting target into database:', err);
     }
   });
 
@@ -168,16 +154,13 @@ io.on('connection', (socket) => {
         console.log(`Removed target ${tid} from list`);
         // Update the database to mark target as Offline
         pool.query('UPDATE targets SET status = $1 WHERE id = $2', ['Offline', tid])
-            .catch(err => {
-                console.error('Error updating target status:', err);
-            });
+          .catch(err => console.error('Error updating target status:', err));
         break;
       }
     }
   });
 });
 
-const backendPort = process.env.BACKEND_PORT || 3001;
-server.listen(backendPort, '0.0.0.0', () => {
-  console.log(`Server listening on port ${backendPort}`);
+server.listen(process.env.PORT, '0.0.0.0', () => {
+  console.log(`Server listening on port ${process.env.PORT}`);
 });
