@@ -2,6 +2,7 @@
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
 		"allowJs": true,
+		"checkJs": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
@@ -9,8 +10,9 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler",
-		"module": "esnext"
+		"module": "esnext",
+		"types": ["vite/client"]
 	},
 	"include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
-	"exclude": ["node_modules/**", ".svelte-kit/**", "telegram_bot.js"]
+	"exclude": ["node_modules/**", ".svelte-kit/**", "telegram_bot.js", "build/**"]
 }
