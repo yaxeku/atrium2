@@ -11,8 +11,12 @@
 		"strict": true,
 		"moduleResolution": "bundler",
 		"module": "esnext",
-		"types": ["vite/client"]
+		"target": "es2022",
+		"lib": ["es2022", "DOM", "DOM.Iterable"],
+		"types": ["vite/client", "node"],
+		"allowSyntheticDefaultImports": true,
+		"isolatedModules": true
 	},
-	"include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
+	"include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "src/**/*.d.ts"],
 	"exclude": ["node_modules/**", ".svelte-kit/**", "telegram_bot.js", "build/**"]
 }

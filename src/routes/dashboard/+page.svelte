@@ -100,7 +100,7 @@
                     <button 
                         class="nav-item" 
                         class:active={selectedElement === "Overview"}
-                        on:click={() => setElement("Overview")}
+                        onclick={() => setElement("Overview")}
                     >
                         <span class="material-icons">home</span>
                         Overview

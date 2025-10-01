@@ -8,13 +8,14 @@
     import bootstrap from "$lib/images/bootstrap.svg"
     import Narc from "$lib/images/narc.png"
 
-    let userName = $state("");
-    let passWord = $state("");
+    import { writable } from 'svelte/store';
+    
+    const userName = writable("");
+    const passWord = writable("");
+    const invalidLoginBool = writable(false);
+    const currentErrorMessage = writable("");
 
     let invalidCredentials = ["yea", "yea"];
-
-    let invalidLoginBool = $state(false);
-    let currentErrorMessage = $state("");
     let errorMessages = [
         "Nope, not quite. Try again, champ!",
         "Uh-oh! Your username and password don’t get along.",
@@ -84,7 +85,7 @@
                 </div>
             </div>
             <div class="loginform">
-                <form on:submit|preventDefault={handleLogin}>
+                <form onsubmit={(e) => { e.preventDefault(); handleLogin(e); }}>
                     <label for="username">Username</label>
                     <input id="username" bind:value={userName} placeholder="Your Username" type="text">
                     <label for="password">Password</label>
