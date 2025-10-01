@@ -11,18 +11,18 @@ const SECRET_KEY = process.env.JWT_SECRET;
 export async function load({ cookies }: RequestEvent) {
     if (!SECRET_KEY) {
         console.error('JWT_SECRET is not defined. Please set it in your .env file.');
-        throw redirect(303, 'login');
+        throw redirect(303, '/admin/login');
     }
     const token = cookies.get('authTokenAdmin');
 
     if (!token) {
-        throw redirect(303, 'login');
+        throw redirect(303, '/admin/login');
     }
 
     try {
         const user = jwt.verify(token, SECRET_KEY);
         return { user };
     } catch {
-        throw redirect(303, 'login');
+        throw redirect(303, '/admin/login');
     }
 }
