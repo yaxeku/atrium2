@@ -56,17 +56,18 @@ PG_USER="$DB_USER"
 PG_DB="$DB_DATABASE"
 PG_PASS="$DB_PASSWORD"
 
-# Check if user and database exist, create if they don't
-if ! sudo -u postgres psql -t -c '\du' | cut -d \| -f 1 | grep -qw $PG_USER; then
-    sudo -u postgres psql -c "CREATE USER $PG_USER WITH PASSWORD '$PG_PASS';"
-fi
-if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $PG_DB; then
-    sudo -u postgres psql -c "CREATE DATABASE $PG_DB OWNER $PG_USER;"
-fi
+# Drop existing user and database to ensure a fresh start
+print_color "33" "Dropping existing database and user (if they exist)..."
+sudo -u postgres psql -c "DROP DATABASE IF EXISTS $PG_DB;"
+sudo -u postgres psql -c "DROP USER IF EXISTS $PG_USER;"
 
-# Clear existing data and import the database schema
-print_color "32" "Clearing database and importing schema..."
-sudo -u postgres psql -d $PG_DB -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+# Create user and database
+print_color "32" "Creating new database and user..."
+sudo -u postgres psql -c "CREATE USER $PG_USER WITH PASSWORD '$PG_PASS';"
+sudo -u postgres psql -c "CREATE DATABASE $PG_DB OWNER $PG_USER;"
+
+# Import the database schema
+print_color "32" "Importing database schema..."
 sudo -u postgres psql -d $PG_DB < database.sql
 
 # --- Application Setup ---
@@ -88,6 +89,15 @@ server {
 
     location / {
         proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    location /admin/api {
+        proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -143,6 +153,15 @@ server {
 
     location / {
         proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    location /admin/api {
+        proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
