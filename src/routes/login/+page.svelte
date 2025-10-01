@@ -8,14 +8,14 @@
     import bootstrap from "$lib/images/bootstrap.svg"
     import Narc from "$lib/images/narc.png"
 
-    import { writable } from 'svelte/store';
-    
-    const userName = writable("");
-    const passWord = writable("");
-    const invalidLoginBool = writable(false);
-    const currentErrorMessage = writable("");
 
-    let invalidCredentials = ["yea", "yea"];
+    
+    let userName = "";
+    let passWord = "";
+    let invalidLoginBool = false;
+    let currentErrorMessage = "";
+
+    let invalidCredentials: string[] = [];
     let errorMessages = [
         "Nope, not quite. Try again, champ!",
         "Uh-oh! Your username and password don’t get along.",
@@ -26,8 +26,8 @@
 
     async function handleLogin(event: SubmitEvent) {
         event.preventDefault();
-        console.log("USER: " + userName)
-        console.log("PASS: " + passWord)
+        console.log("USER: " + userName);
+        console.log("PASS: " + passWord);
 
         const response = await fetch('/api/login', {
             method: 'POST',
@@ -44,10 +44,9 @@
 
             if (errorMsgIndex > errorMessages.length - 1) {
                 errorMsgIndex = 0;
-                currentErrorMessage = errorMessages[errorMessages.length - 1];
             }
 
-            currentErrorMessage = errorMessages[errorMsgIndex]
+            currentErrorMessage = errorMessages[errorMsgIndex];
             errorMsgIndex++;
 
             invalidCredentials = [userName, passWord];
