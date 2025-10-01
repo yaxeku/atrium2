@@ -1,0 +1,25 @@
+Stop all services first:
+sudo systemctl stop nginx
+pm2 delete all
+
+Clear any remaining processes:
+sudo pkill -f node
+
+Check if ports are free:
+sudo lsof -i :80
+sudo lsof -i :443
+sudo lsof -i :3000
+sudo lsof -i :3001
+
+Run the updated setup script:
+sudo bash setup.sh
+
+
+# Check Nginx error logs
+sudo tail -f /var/log/nginx/error.log
+
+# Check PM2 logs
+pm2 logs
+
+# Check system logs for port conflicts
+sudo journalctl -xe

@@ -383,7 +383,7 @@
                         <img 
                             src={currentTemplate.preview} 
                             alt="Email Template Preview"
-                            on:error={(e) => (e.currentTarget as HTMLImageElement).src = placeholderImage}
+                            on:error={(e) => { const img = e.currentTarget as HTMLImageElement; img.src = placeholderImage; }}
                             class="preview-image"
                         />
                         <div class="preview-overlay">

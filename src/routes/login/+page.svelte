@@ -84,7 +84,7 @@
                 </div>
             </div>
             <div class="loginform">
-                <form onsubmit={handleLogin}>
+                <form on:submit|preventDefault={handleLogin}>
                     <label for="username">Username</label>
                     <input id="username" bind:value={userName} placeholder="Your Username" type="text">
                     <label for="password">Password</label>
