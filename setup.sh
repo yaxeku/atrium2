@@ -124,6 +124,14 @@ DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_DATABASE"
 grep -qF "PORT=" "$APP_DIR/.env" && sed -i "s/PORT=.*/PORT=8080/" "$APP_DIR/.env" || echo "PORT=8080" >> "$APP_DIR/.env"
 grep -qF "VITE_APP_URL=" "$APP_DIR/.env" && sed -i "s|VITE_APP_URL=.*|VITE_APP_URL=https://$DOMAIN_NAME|" "$APP_DIR/.env" || echo "VITE_APP_URL=https://$DOMAIN_NAME" >> "$APP_DIR/.env"
 grep -qF "DATABASE_URL=" "$APP_DIR/.env" && sed -i "s|DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" "$APP_DIR/.env" || echo "DATABASE_URL=$DATABASE_URL" >> "$APP_DIR/.env"
+
+# SvelteKit requires private env variables to be prefixed with `PRIVATE_` to be exposed during build.
+# We will rename the variables in the .env file that the application will use.
+sed -i 's/^\(JWT_SECRET\)/PRIVATE_\1/' "$APP_DIR/.env"
+sed -i 's/^\(MAIL_SERVER_URL\)/PRIVATE_\1/' "$APP_DIR/.env"
+sed -i 's/^\(MAIL_AUTH_HEADER\)/PRIVATE_\1/' "$APP_DIR/.env"
+sed -i 's/^\(MAIL_AUTH_VALUE\)/PRIVATE_\1/' "$APP_DIR/.env"
+
 echo ".env file configured for production."
 
 print_info "Installing dependencies and building application..."

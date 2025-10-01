@@ -3,9 +3,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '$lib/db/config';
-import { JWT_SECRET } from '$env/dynamic/private';
+import dotenv from 'dotenv';
 
-const SECRET_KEY = JWT_SECRET;
+dotenv.config();
+
+const SECRET_KEY = process.env.JWT_SECRET;
 
 
 export async function POST({ request, cookies }: RequestEvent) {

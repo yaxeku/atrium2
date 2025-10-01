@@ -3,7 +3,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '$env/dynamic/private';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function GET({ params, request }: RequestEvent) {
     if (!JWT_SECRET) {

@@ -3,7 +3,14 @@ import type { RequestEvent } from '@sveltejs/kit';
 import fs from 'fs';
 import path from 'path';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET, MAIL_SERVER_URL, REQUIRED_AUTH_HEADER, REQUIRED_AUTH_VALUE } from '$env/dynamic/private';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const MAIL_SERVER_URL = process.env.MAIL_SERVER_URL;
+const REQUIRED_AUTH_HEADER = process.env.MAIL_AUTH_HEADER;
+const REQUIRED_AUTH_VALUE = process.env.MAIL_AUTH_VALUE;
 
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 60 * 1000; 
