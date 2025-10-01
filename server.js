@@ -50,6 +50,56 @@ app.get('/api/targets/:username', async (req, res) => {
   }
 });
 
+app.get('/api/guild/getDomains', async (req, res) => {
+  const { guild } = req.query;
+  if (!guild) {
+    return res.status(400).json({ error: 'Guild parameter is required' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM domains WHERE belongsto = $1', [guild]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Detailed error fetching domains:', err);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
+  }
+});
+
+app.get('/api/guild/getGuild', async (req, res) => {
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ error: 'Username parameter is required' });
+  }
+  try {
+    const result = await pool.query('SELECT guild FROM users WHERE username = $1', [username]);
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (err) {
+    console.error('Detailed error fetching guild:', err);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
+  }
+});
+
+app.get('/admin/api/getGuild', async (req, res) => {
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ error: 'Username parameter is required' });
+  }
+  try {
+    const result = await pool.query('SELECT guild FROM users WHERE username = $1', [username]);
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (err) {
+    console.error('Detailed error fetching guild for admin:', err);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
+  }
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
