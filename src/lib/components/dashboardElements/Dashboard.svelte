@@ -188,7 +188,7 @@
         const res = await fetch(`/api/targets/user/${username}`);
         Targets = await res.json();
 
-        socket = io(`http://${window.location.hostname}:3001`, {
+        socket = io(`${window.location.protocol}//${window.location.host}`, {
             path: '/socket.io'
         });
 

