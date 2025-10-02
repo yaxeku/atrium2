@@ -48,8 +48,8 @@ export async function POST({ request, cookies }: RequestEvent) {
         
         // Simplified cookie settings for IP address
         cookies.set('authToken', token, {
-            httpOnly: true,
-            secure: false,  // Always false for IP addresses
+            httpOnly: true,   // Back to true for security
+            secure: false,    // Always false for IP addresses
             sameSite: 'lax',
             maxAge: 3600,
             path: '/'

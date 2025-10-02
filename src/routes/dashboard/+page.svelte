@@ -47,17 +47,22 @@
     }
 
     onMount(async () => {
-        authToken = localStorage.getItem('authToken');
-        if (authToken) {
-            try {
-                const decodedToken = jwtDecode<CustomJwtPayload>(authToken);
-                username = decodedToken.userName;
+        // Server-side authentication is already handled in +layout.server.ts
+        // If we reach this point, the user is authenticated
+        
+        // We need to get the username somehow - let's fetch it from the server
+        try {
+            const response = await fetch('/api/user/me');
+            if (response.ok) {
+                const userData = await response.json();
+                username = userData.userName;
                 await fetchGuild();
-            } catch (error) {
-                console.error("Error decoding token:", error);
+            } else {
+                console.error('Failed to get user data');
                 goto('/login');
             }
-        } else {
+        } catch (error) {
+            console.error('Error fetching user data:', error);
             goto('/login');
         }
 

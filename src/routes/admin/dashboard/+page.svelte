@@ -47,20 +47,24 @@
         goto('/logout');
     }
 
-    onMount(() => {
-        authToken = localStorage.getItem('authTokenAdmin');
-        if (authToken) {
-            try {
-                const decodedToken = jwtDecode<CustomJwtPayload>(authToken);
-                console.error("man: ", decodedToken)
-                username = decodedToken.userName;
+    onMount(async () => {
+        // Server-side authentication is already handled in +layout.server.ts
+        // If we reach this point, the user is authenticated
+        
+        // We need to get the username somehow - let's fetch it from the server
+        try {
+            const response = await fetch('/api/admin/user/me');
+            if (response.ok) {
+                const userData = await response.json();
+                username = userData.userName;
                 fetchGuild(username);
-            } catch (error) {
-                console.error("Error decoding token:", error);
-                goto('login');
+            } else {
+                console.error('Failed to get admin user data');
+                goto('/admin/login');
             }
-        } else {
-            goto('login');
+        } catch (error) {
+            console.error('Error fetching admin user data:', error);
+            goto('/admin/login');
         }
 
         setTimeout(() => {
