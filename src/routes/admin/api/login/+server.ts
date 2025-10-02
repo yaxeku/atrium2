@@ -42,12 +42,19 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         const token = jwt.sign({ userName }, SECRET_KEY, { expiresIn: '1h' });
 
+        // Don't set domain for IP addresses, only for actual domain names
+        const domainName = process.env.DOMAIN_NAME;
+        const isIPAddress = domainName && /^\d+\.\d+\.\d+\.\d+$/.test(domainName);
+        const domain = process.env.NODE_ENV === 'production' && !isIPAddress ? domainName : undefined;
+        
+        console.log('Setting admin cookie with domain:', domain);
+        
         cookies.set('authTokenAdmin', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 3600, 
-            path: '/' 
+            secure: false,  // Set to false for IP addresses
+            sameSite: 'lax',
+            maxAge: 3600,
+            path: '/'
         });
 
         // Return success response with the token
