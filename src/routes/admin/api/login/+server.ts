@@ -44,7 +44,10 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         console.log('Admin login successful for user:', userName);
         console.log('Generated admin token:', token.substring(0, 20) + '...');
-        console.log('NODE_ENV:', process.env.NODE_ENV);
+        
+        // Check if we're in production by looking for build environment or process
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.DOMAIN_NAME;
+        console.log('Is production environment:', isProduction);
         console.log('DOMAIN_NAME:', process.env.DOMAIN_NAME);
         
         // Simplified cookie settings for IP address

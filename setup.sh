@@ -48,6 +48,44 @@ sudo -u postgres psql -c "ALTER ROLE $DB_USER SET default_transaction_isolation 
 sudo -u postgres psql -c "ALTER ROLE $DB_USER SET timezone TO 'UTC';"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
 
+# --- Generate JWT Secret ---
+echo "--- Generating JWT secret... ---"
+JWT_SECRET=$(openssl rand -base64 64)
+
+# --- Create Environment File ---
+echo "--- Creating environment configuration... ---"
+cat <<EOF > /var/www/xekku-panel/.env
+# Database configuration
+DB_USER=$DB_USER
+DB_HOST=localhost
+DB_DATABASE=$DB_NAME
+DB_PASSWORD=$DB_PASSWORD
+DB_PORT=5432
+
+# Domain configuration (used for cookie settings)
+DOMAIN_NAME=$DOMAIN_NAME
+
+JWT_SECRET=$JWT_SECRET
+# Server configuration
+PORT=3000
+SOCKET_PORT=3001
+VITE_SERVER_IP=$DOMAIN_NAME
+
+# Mailer configuration
+PRIVATE_MAIL_SERVER_URL=http://$DOMAIN_NAME:3000/send_mail
+PRIVATE_MAIL_AUTH_HEADER=a-very-legit-token
+PRIVATE_MAIL_AUTH_VALUE=493942-3124512-65941-2349124-12392491-1234941-458504-2345
+
+# SMS configuration
+SMS_API_KEY=your_sms_api_key
+SMS_API_SECRET=your_sms_api_secret
+SMS_FROM_NUMBER=your_sms_from_number
+
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_BOT_ADMIN_ID=your_telegram_admin_id
+EOF
+
 # --- Application Setup ---
 echo "--- Cloning and setting up the application... ---"
 # Remove existing directory to ensure a fresh clone
@@ -128,29 +166,42 @@ server {
     }
 
     location /socket.io/ {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
     }
 }
 EOF
 
 # --- Start Application with PM2 ---
 echo "--- Starting the application with PM2... ---"
-# Ensure port 3000 is free before starting the app
+# Ensure ports are free before starting the apps
 if lsof -t -i:3000 > /dev/null; then
   echo "A process is already using port 3000. Killing it..."
   kill -9 $(lsof -t -i:3000)
 fi
-# Stop and delete any existing PM2 process with the same name
+
+if lsof -t -i:3001 > /dev/null; then
+  echo "A process is already using port 3001. Killing it..."
+  kill -9 $(lsof -t -i:3001)
+fi
+
+# Stop and delete any existing PM2 processes
 pm2 delete "xekku-panel" || true
+pm2 delete "xekku-panel-socket" || true
 
 # Build the application first
 npm run build
 
-# Start the application using the npm start script
+# Start the main SvelteKit application
 pm2 start npm --name "xekku-panel" -- start
+
+# Start the Socket.io server
+pm2 start server.js --name "xekku-panel-socket"
+
 pm2 startup
 pm2 save
 
@@ -165,6 +216,21 @@ echo "---"
 echo "Deployment Complete!"
 echo "Your Xekku Panel is now running."
 echo "You can access it at: https://$DOMAIN_NAME"
-echo "Remember to edit /var/www/xekku-panel/.env with your secret keys."
-echo "To view logs, run: pm2 logs xekku-panel"
+echo "Main application: https://$DOMAIN_NAME (port 3000)"
+echo "Socket.io server: running on port 3001"
+echo ""
+echo "Generated JWT Secret: $JWT_SECRET"
+echo ""
+echo "To view logs:"
+echo "  Main app: pm2 logs xekku-panel"
+echo "  Socket.io: pm2 logs xekku-panel-socket"
+echo "  All logs: pm2 logs"
+echo ""
+echo "To manage the application:"
+echo "  pm2 restart xekku-panel xekku-panel-socket"
+echo "  pm2 stop xekku-panel xekku-panel-socket"
+echo "  pm2 status"
+echo ""
+echo "Remember to update your Telegram bot token and other settings in:"
+echo "/var/www/xekku-panel/.env"
 echo "---"

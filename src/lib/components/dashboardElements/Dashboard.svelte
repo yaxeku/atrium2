@@ -185,10 +185,10 @@
             console.error('Error fetching settings:', err);
         }
 
-        const res = await fetch(`/api/targets/${username}`);
+        const res = await fetch(`/api/targets/user/${username}`);
         Targets = await res.json();
 
-        socket = io({
+        socket = io(`http://${window.location.hostname}:3001`, {
             path: '/socket.io'
         });
 

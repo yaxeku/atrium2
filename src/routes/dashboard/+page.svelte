@@ -15,12 +15,7 @@
 
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { jwtDecode, type JwtPayload } from 'jwt-decode';
     import { fade } from 'svelte/transition';
-
-    interface CustomJwtPayload extends JwtPayload {
-        userName: string;
-    }
 
     let selectedElement = $state("lol");
     let authToken;

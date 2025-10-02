@@ -23,19 +23,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Simple API endpoint to retrieve targets by username
-app.get('/api/targets/:username', async (req, res) => {
-  const { username } = req.params;
-  console.log(username)
-  try {
-    const result = await pool.query('SELECT * FROM targets WHERE belongsto = $1', [username]);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-});
-
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -161,6 +148,6 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(process.env.PORT, 'localhost', () => {
-  console.log(`Server listening on port ${process.env.PORT}`);
+server.listen(process.env.SOCKET_PORT || 3001, '0.0.0.0', () => {
+  console.log(`Socket.IO server listening on port ${process.env.SOCKET_PORT || 3001}`);
 });
