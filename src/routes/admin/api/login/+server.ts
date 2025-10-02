@@ -44,7 +44,7 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         cookies.set('authTokenAdmin', token, {
             httpOnly: true,
-            secure: true,
+            secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
             maxAge: 3600, 
             path: '/' 
