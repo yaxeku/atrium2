@@ -134,7 +134,20 @@ cd /var/www/xekku-panel
 echo "--- Installing Node.js dependencies... ---"
 echo "Ensuring a clean installation by removing old dependencies..."
 rm -rf node_modules package-lock.json
-npm install
+
+# Install dependencies with error handling
+if npm install; then
+    echo "✅ Dependencies installed successfully"
+else
+    echo "❌ Failed to install dependencies"
+    echo "Retrying with npm ci..."
+    if npm ci; then
+        echo "✅ Dependencies installed successfully with npm ci"
+    else
+        echo "❌ Failed to install dependencies even with npm ci"
+        exit 1
+    fi
+fi
 
 echo "--- Initializing database schema... ---"
 sudo -u postgres psql -d $DB_NAME -f /var/www/xekku-panel/database.sql
@@ -179,7 +192,15 @@ fi
 systemctl restart nginx
 
 # Obtain the certificate using the webroot method
-certbot certonly --webroot -w /var/www/certbot -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_NAME
+echo "--- Obtaining SSL certificate... ---"
+if certbot certonly --webroot -w /var/www/certbot -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_NAME; then
+    echo "✅ SSL certificate obtained successfully"
+else
+    echo "❌ Failed to obtain SSL certificate"
+    echo "This may be due to DNS not pointing to this server yet"
+    echo "You can retry later with: certbot certonly --webroot -w /var/www/certbot -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_NAME"
+    echo "Continuing with setup..."
+fi
 
 # --- Advanced Nginx Configuration with Domain Routing ---
 echo "--- Setting up advanced domain routing configuration... ---"
@@ -326,18 +347,77 @@ pm2 delete "xekku-panel-socket" || true
 
 # Build the application first
 echo "--- Building the application... ---"
-npm run build
+
+# Ensure we're in the correct directory
+cd /var/www/xekku-panel
+
+# Clean any potential build artifacts
+echo "--- Cleaning build artifacts... ---"
+rm -rf .svelte-kit build node_modules/.cache
+
+# Reinstall dependencies to ensure clean build
+echo "--- Ensuring clean dependencies... ---"
+npm ci
+
+# Generate SvelteKit configuration
+echo "--- Generating SvelteKit configuration... ---"
+npx svelte-kit sync
+
+# Build the application with error handling
+echo "--- Building SvelteKit application... ---"
+if npm run build; then
+    echo "✅ Build completed successfully"
+else
+    echo "❌ Build failed. Attempting recovery..."
+    
+    # Try to fix common build issues
+    rm -rf .svelte-kit node_modules/.cache
+    npm ci
+    npx svelte-kit sync
+    
+    # Retry build
+    if npm run build; then
+        echo "✅ Build completed successfully after recovery"
+    else
+        echo "❌ Build failed after recovery attempt"
+        echo "Please check the application code for syntax errors"
+        exit 1
+    fi
+fi
 
 # Start the main SvelteKit application
 echo "--- Starting main application... ---"
-pm2 start npm --name "xekku-panel" -- start
+if pm2 start npm --name "xekku-panel" -- start; then
+    echo "✅ Main application started successfully"
+else
+    echo "❌ Failed to start main application"
+    exit 1
+fi
 
 # Start the Socket.io server
 echo "--- Starting Socket.io server... ---"
-pm2 start server.js --name "xekku-panel-socket"
+if pm2 start server.js --name "xekku-panel-socket"; then
+    echo "✅ Socket.io server started successfully"
+else
+    echo "❌ Failed to start Socket.io server"
+    exit 1
+fi
 
 # Setup PM2 startup and save
+echo "--- Configuring PM2 startup... ---"
 pm2 startup
+pm2 save
+
+# Verify PM2 services are running
+echo "--- Verifying PM2 services... ---"
+sleep 3
+if pm2 status | grep -q "online"; then
+    echo "✅ PM2 services are running"
+else
+    echo "❌ Some PM2 services failed to start"
+    pm2 status
+    exit 1
+fi
 pm2 save
 
 # --- Finalizing Setup ---
@@ -385,6 +465,61 @@ esac
 EOF
 
 chmod +x /var/www/xekku-panel/manage_domains.sh
+
+# --- Final System Verification ---
+echo "--- Performing final system verification... ---"
+
+echo "🔍 Checking Nginx configuration..."
+if nginx -t >/dev/null 2>&1; then
+    echo "✅ Nginx configuration valid"
+else
+    echo "❌ Nginx configuration has errors"
+    nginx -t
+    exit 1
+fi
+
+echo "🔍 Checking PM2 services..."
+if pm2 list | grep -q "online.*xekku-panel"; then
+    echo "✅ Main application online"
+else
+    echo "❌ Main application not running"
+    pm2 status
+    exit 1
+fi
+
+if pm2 list | grep -q "online.*xekku-panel-socket"; then
+    echo "✅ Socket.io server online"
+else
+    echo "❌ Socket.io server not running"
+    pm2 status
+    exit 1
+fi
+
+echo "🔍 Checking database connection..."
+if sudo -u postgres psql -d $DB_NAME -c "SELECT 1;" >/dev/null 2>&1; then
+    echo "✅ Database connection successful"
+else
+    echo "❌ Database connection failed"
+    exit 1
+fi
+
+echo "🔍 Checking main domain accessibility..."
+if curl -I -s https://$DOMAIN_NAME | grep -q "200\|301\|302"; then
+    echo "✅ Main domain accessible"
+else
+    echo "⚠️  Main domain check failed (may need time for SSL/DNS)"
+fi
+
+echo "🔍 Checking Socket.io server..."
+if curl -I -s https://$DOMAIN_NAME/socket.io/ | grep -q "200\|400"; then
+    echo "✅ Socket.io server accessible"
+else
+    echo "⚠️  Socket.io server check failed"
+fi
+
+echo ""
+echo "✅ System verification completed!"
+echo ""
 
 echo "==================================="
 echo "    DEPLOYMENT COMPLETE! ✅         "
