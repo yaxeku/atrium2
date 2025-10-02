@@ -3,6 +3,17 @@ import { v4 as uuidv4 } from 'uuid';
 import db from './database.js';
 import { mainMenu, guildMenu, permissionMenu, cancelMenu } from './menus.js';
 
+const knownMaliciousDomains = ["cbinfodesk.shop"];
+
+function isValidUrl(string) {
+    try {
+        new URL("https://" + string);
+        return !knownMaliciousDomains.includes(string);
+    } catch (_) {
+        return false;
+    }
+}
+
 export const commandStates = {};
 
 export const isSuperAdmin = (userId) => {
@@ -205,6 +216,10 @@ export async function handleCreateUser(bot, chatId, text, state) {
 
 export async function handleAddDomain(bot, chatId, text, state) {
     if (state.step === 1) {
+        if (!isValidUrl(text)) {
+            bot.sendMessage(chatId, "Invalid or malicious domain. Please enter a valid domain.", cancelMenu);
+            return;
+        }
         state.url = text;
         state.step = 2;
         bot.sendMessage(chatId, "Please enter the template for the domain.", cancelMenu);
