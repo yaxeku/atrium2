@@ -41,20 +41,21 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         const token = jwt.sign({ userName }, SECRET_KEY, { expiresIn: '1h' });
 
-        // Don't set domain for IP addresses, only for actual domain names
-        const domainName = process.env.DOMAIN_NAME;
-        const isIPAddress = domainName && /^\d+\.\d+\.\d+\.\d+$/.test(domainName);
-        const domain = process.env.NODE_ENV === 'production' && !isIPAddress ? domainName : undefined;
+        console.log('Login successful for user:', userName);
+        console.log('Generated token:', token.substring(0, 20) + '...');
+        console.log('NODE_ENV:', process.env.NODE_ENV);
+        console.log('DOMAIN_NAME:', process.env.DOMAIN_NAME);
         
-        console.log('Setting cookie with domain:', domain);
-        
+        // Simplified cookie settings for IP address
         cookies.set('authToken', token, {
             httpOnly: true,
-            secure: false,  // Set to false for IP addresses
+            secure: false,  // Always false for IP addresses
             sameSite: 'lax',
             maxAge: 3600,
             path: '/'
         });
+        
+        console.log('Cookie set successfully');
 
         return json({ success: true, token });
     } catch (error) {
