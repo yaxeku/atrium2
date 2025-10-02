@@ -125,13 +125,24 @@ grep -qF "PORT=" "$APP_DIR/.env" && sed -i "s/PORT=.*/PORT=8080/" "$APP_DIR/.env
 grep -qF "VITE_APP_URL=" "$APP_DIR/.env" && sed -i "s|VITE_APP_URL=.*|VITE_APP_URL=https://$DOMAIN_NAME|" "$APP_DIR/.env" || echo "VITE_APP_URL=https://$DOMAIN_NAME" >> "$APP_DIR/.env"
 grep -qF "DATABASE_URL=" "$APP_DIR/.env" && sed -i "s|DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" "$APP_DIR/.env" || echo "DATABASE_URL=$DATABASE_URL" >> "$APP_DIR/.env"
 
-# SvelteKit requires private env variables to be prefixed with `PRIVATE_` to be exposed during build.
-# We will rename the variables in the .env file that the application will use.
-# This command checks if the line exists and does NOT already have the prefix, then adds it.
-grep -q "^JWT_SECRET=" "$APP_DIR/.env" && sed -i 's/^JWT_SECRET=/PRIVATE_JWT_SECRET=/' "$APP_DIR/.env" || true
-grep -q "^MAIL_SERVER_URL=" "$APP_DIR/.env" && sed -i 's/^MAIL_SERVER_URL=/PRIVATE_MAIL_SERVER_URL=/' "$APP_DIR/.env" || true
-grep -q "^MAIL_AUTH_HEADER=" "$APP_DIR/.env" && sed -i 's/^MAIL_AUTH_HEADER=/PRIVATE_MAIL_AUTH_HEADER=/' "$APP_DIR/.env" || true
-grep -q "^MAIL_AUTH_VALUE=" "$APP_DIR/.env" && sed -i 's/^MAIL_AUTH_VALUE=/PRIVATE_MAIL_AUTH_VALUE=/' "$APP_DIR/.env" || true
+# SvelteKit requires private env variables to be prefixed with `PRIVATE_` for the build process.
+# The following commands make the script idempotent and robust by deleting any old
+# versions of the variables and appending the correctly formatted ones.
+sed -i '/^PRIVATE_JWT_SECRET=/d' "$APP_DIR/.env"
+sed -i '/^JWT_SECRET=/d' "$APP_DIR/.env"
+sed -i '/^PRIVATE_MAIL_SERVER_URL=/d' "$APP_DIR/.env"
+sed -i '/^MAIL_SERVER_URL=/d' "$APP_DIR/.env"
+sed -i '/^PRIVATE_MAIL_AUTH_HEADER=/d' "$APP_DIR/.env"
+sed -i '/^MAIL_AUTH_HEADER=/d' "$APP_DIR/.env"
+sed -i '/^PRIVATE_MAIL_AUTH_VALUE=/d' "$APP_DIR/.env"
+sed -i '/^MAIL_AUTH_VALUE=/d' "$APP_DIR/.env"
+
+# Append the correctly formatted variables. The values are sourced from the original .env file.
+echo "PRIVATE_JWT_SECRET=$JWT_SECRET" >> "$APP_DIR/.env"
+# Note: We check if these optional mail variables exist before adding them.
+if [ -n "$MAIL_SERVER_URL" ]; then echo "PRIVATE_MAIL_SERVER_URL=$MAIL_SERVER_URL" >> "$APP_DIR/.env"; fi
+if [ -n "$MAIL_AUTH_HEADER" ]; then echo "PRIVATE_MAIL_AUTH_HEADER=$MAIL_AUTH_HEADER" >> "$APP_DIR/.env"; fi
+if [ -n "$MAIL_AUTH_VALUE" ]; then echo "PRIVATE_MAIL_AUTH_VALUE=$MAIL_AUTH_VALUE" >> "$APP_DIR/.env"; fi
 
 echo ".env file configured for production."
 

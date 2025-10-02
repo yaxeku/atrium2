@@ -2,9 +2,9 @@ import { redirect } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '$env/dynamic/private';
+import { PRIVATE_JWT_SECRET } from '$env/dynamic/private';
 
-const SECRET_KEY = JWT_SECRET;
+const SECRET_KEY = PRIVATE_JWT_SECRET;
 
 export async function load({ cookies }: RequestEvent) {
     if (!SECRET_KEY) {
