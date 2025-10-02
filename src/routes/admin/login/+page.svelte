@@ -27,33 +27,28 @@
         console.log("USER: " + userName)
         console.log("PASS: " + passWord)
 
-        try {
-            const response = await fetch('/admin/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userName, passWord }),
-            });
+        const response = await fetch('/admin/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userName, passWord }),
+        });
 
-            if (response.ok) {
-                const { token } = await response.json();
-                localStorage.setItem('authTokenAdmin', token);
-                goto('/admin/dashboard');
-            } else {
-                const { error } = await response.json();
+        if (response.ok) {
+            const { token } = await response.json();
+            localStorage.setItem('authToken', token);
+            goto('admin/dashboard');
+        } else {
+            const { error } = await response.json();
 
-                if (errorMsgIndex > errorMessages.length - 1) {
-                    errorMsgIndex = 0;
-                    currentErrorMessage = errorMessages[errorMessages.length - 1];
-                }
-
-                currentErrorMessage = errorMessages[errorMsgIndex]
-                errorMsgIndex++;
-
-                invalidCredentials = [userName, passWord];
+            if (errorMsgIndex > errorMessages.length - 1) {
+                errorMsgIndex = 0;
+                currentErrorMessage = errorMessages[errorMessages.length - 1];
             }
-        } catch (err) {
-            console.error("Login fetch failed:", err);
-            currentErrorMessage = "A network error occurred. Please try again.";
+
+            currentErrorMessage = errorMessages[errorMsgIndex]
+            errorMsgIndex++;
+
+            invalidCredentials = [userName, passWord];
         }
     }
 
@@ -89,7 +84,7 @@
                 </div>
             </div>
             <div class="loginform">
-                <form onsubmit={handleLogin} method="POST" action="/admin/api/login">
+                <form onsubmit={handleLogin}>
                     <label for="username">Username</label>
                     <input id="username" bind:value={userName} placeholder="Your Username" type="text">
                     <label for="password">Password</label>
