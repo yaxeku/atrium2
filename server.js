@@ -137,12 +137,17 @@ io.on('connection', (socket) => {
    * We look up the target's socket and emit 'action' to that target.
    */
   socket.on('sendActionToTarget', async ({ targetID, action, customUrl }) => {
+    console.log(`Dashboard requesting action for target ${targetID}:`, { action, customUrl });
     const targetEntry = targetSockets.get(targetID);
     if (targetEntry) {
       targetEntry.socket.emit('action', { action, customUrl });
-      console.log(`Emitted action "${action}" to target ${targetID}`);
+      console.log(`✅ Emitted action "${action}" to target ${targetID}`);
+      if (customUrl) {
+        console.log(`   Custom URL: ${customUrl}`);
+      }
     } else {
-      console.log(`No target found with ID ${targetID}`);
+      console.log(`❌ No target found with ID ${targetID}`);
+      console.log(`Available targets:`, Array.from(targetSockets.keys()));
     }
   });
 

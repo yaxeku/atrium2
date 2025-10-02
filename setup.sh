@@ -49,6 +49,29 @@ ufw allow 3001
 
 # --- Database Configuration ---
 echo "--- Configuring PostgreSQL database... ---"
+
+# Stop any existing PM2 processes first
+echo "--- Stopping existing PM2 processes... ---"
+pm2 stop all || true
+pm2 delete all || true
+
+# Kill any Node.js processes that might be using the database
+echo "--- Stopping Node.js processes... ---"
+pkill -f node || true
+pkill -f npm || true
+
+# Wait for processes to fully stop
+sleep 3
+
+# Check and terminate active database connections
+echo "--- Checking database connections... ---"
+sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DB_NAME' AND pid <> pg_backend_pid();" || true
+
+# Wait a moment for connections to close
+sleep 2
+
+# Now safely drop and recreate database
+echo "--- Dropping and recreating database... ---"
 sudo -u postgres psql -c "DROP DATABASE IF EXISTS $DB_NAME;"
 sudo -u postgres psql -c "DROP USER IF EXISTS $DB_USER;"
 sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;"
@@ -115,6 +138,15 @@ npm install
 
 echo "--- Initializing database schema... ---"
 sudo -u postgres psql -d $DB_NAME -f /var/www/xekku-panel/database.sql
+
+# Verify database setup was successful
+echo "--- Verifying database setup... ---"
+if sudo -u postgres psql -d $DB_NAME -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" | grep -q "[1-9]"; then
+    echo "✅ Database schema created successfully"
+else
+    echo "❌ Database schema creation failed"
+    exit 1
+fi
 
 # --- Nginx and SSL Configuration ---
 echo "--- Configuring Nginx and obtaining SSL certificate... ---"

