@@ -13,7 +13,7 @@ DROP TABLE IF EXISTS public.bot_permissions CASCADE;
 
 --
 -- Name: users; Type: TABLE; Schema: public
---
+--ss
 
 CREATE TABLE public.users (
     username text NOT NULL,

@@ -63,15 +63,61 @@ echo "Ensuring a clean installation by removing old dependencies..."
 rm -rf node_modules package-lock.json
 npm install
 
-# --- Nginx Configuration ---
-echo "--- Configuring Nginx... ---"
+echo "--- Initializing database schema... ---"
+sudo -u postgres psql -d $DB_NAME -f /var/www/xekku-panel/database.sql
+
+# --- Nginx and SSL Configuration ---
+echo "--- Configuring Nginx and obtaining SSL certificate... ---"
+# Create a directory for Certbot's ACME challenges
+mkdir -p /var/www/certbot
 # Remove ALL default/existing Nginx configs to prevent conflicts
 rm -f /etc/nginx/sites-enabled/*
 
+# Create a temporary Nginx config for the HTTP challenge
 cat <<EOF > /etc/nginx/sites-available/$DOMAIN_NAME
 server {
+    listen 80;
     server_name $DOMAIN_NAME;
-    
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+}
+EOF
+
+# Enable the site and restart Nginx
+rm -f /etc/nginx/sites-enabled/$DOMAIN_NAME
+ln -s /etc/nginx/sites-available/$DOMAIN_NAME /etc/nginx/sites-enabled/
+
+# Forcefully kill any process on port 80 to prevent conflicts
+if lsof -t -i:80 > /dev/null; then
+  echo "A process is already using port 80. Killing it..."
+  kill -9 $(lsof -t -i:80)
+fi
+
+systemctl restart nginx
+
+# Obtain the certificate using the webroot method
+certbot certonly --webroot -w /var/www/certbot -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_NAME
+
+# Overwrite the temporary config with the final, SSL-enabled configuration
+cat <<EOF > /etc/nginx/sites-available/$DOMAIN_NAME
+server {
+    listen 80;
+    server_name $DOMAIN_NAME;
+    # Redirect all HTTP traffic to HTTPS
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN_NAME;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -89,19 +135,6 @@ server {
     }
 }
 EOF
-
-# Enable the site by creating a symlink (remove if it already exists)
-rm -f /etc/nginx/sites-enabled/$DOMAIN_NAME
-ln -s /etc/nginx/sites-available/$DOMAIN_NAME /etc/nginx/sites-enabled/
-
-# Test Nginx configuration
-nginx -t
-
-# --- SSL Certificate Setup ---
-echo "--- Obtaining SSL certificate with Certbot... ---"
-# Stop Nginx temporarily to ensure Certbot can bind to port 80
-systemctl stop nginx
-certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_NAME
 
 # --- Start Application with PM2 ---
 echo "--- Starting the application with PM2... ---"
@@ -122,10 +155,10 @@ pm2 startup
 pm2 save
 
 # --- Finalizing Setup ---
-echo "--- Testing final Nginx config and starting the service... ---"
-# Test the configuration syntax again after Certbot's changes
+echo "--- Applying final Nginx configuration... ---"
+# Test the final configuration and restart Nginx
 nginx -t
-systemctl start nginx
+systemctl restart nginx
 
 echo "---"
 echo "---"
