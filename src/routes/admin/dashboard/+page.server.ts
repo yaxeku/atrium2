@@ -1,6 +1,5 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
