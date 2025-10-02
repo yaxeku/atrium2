@@ -89,7 +89,7 @@
                 </div>
             </div>
             <div class="loginform">
-                <form onsubmit={handleLogin}>
+                <form onsubmit={handleLogin} method="POST" action="/admin/api/login">
                     <label for="username">Username</label>
                     <input id="username" bind:value={userName} placeholder="Your Username" type="text">
                     <label for="password">Password</label>
