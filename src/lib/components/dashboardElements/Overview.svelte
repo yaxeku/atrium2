@@ -49,7 +49,7 @@
 
     onMount(async () => {
         await fetchDomains();
-        const res = await fetch(`https://artofjotlery.ru/socketServer/api/targets/${username}`);
+        const res = await fetch(`/api/targets/${username}`);
         Targets = await res.json();
 
         const cashoutsResponse = await fetch(`/api/guild/getCallerCashouts?guild=${guild}&username=${username}`);

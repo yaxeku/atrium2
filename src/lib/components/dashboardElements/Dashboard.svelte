@@ -103,7 +103,7 @@
 
         if (capturedData) {
             try {
-                const res = await fetch(`https://artofjotlery.ru/api/targets/${selectedID}`);
+                const res = await fetch(`/api/targets/${selectedID}`);
                 if (res.ok) {
                     capturedLogs = await res.json();
                 } else {
@@ -185,11 +185,11 @@
             console.error('Error fetching settings:', err);
         }
 
-        const res = await fetch(`https://artofjotlery.ru/socketServer/api/targets/${username}`);
+        const res = await fetch(`/api/targets/${username}`);
         Targets = await res.json();
 
-        socket = io('https://artofjotlery.ru', {
-            path: '/socketServer/socket.io'
+        socket = io({
+            path: '/socket.io'
         });
 
         socket.emit('joinDashboardRoom', { username });

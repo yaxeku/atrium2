@@ -30,7 +30,8 @@ apt-get update
 apt-get upgrade -y
 
 echo "--- Installing dependencies (Nginx, PostgreSQL, Node.js, Certbot, PM2)... ---"
-apt-get install -y nginx postgresql postgresql-contrib git curl
+# lsof is needed to check for processes on a given port
+apt-get install -y nginx postgresql postgresql-contrib git curl lsof
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 apt-get install -y nodejs
 apt-get install -y certbot python3-certbot-nginx
@@ -49,7 +50,9 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 
 # --- Application Setup ---
 echo "--- Cloning and setting up the application... ---"
-# Create directory if it doesn't exist
+# Remove existing directory to ensure a fresh clone
+rm -rf /var/www/xekku-panel
+# Create parent directory if it doesn't exist
 mkdir -p /var/www
 # Clone the repository
 git clone https://github.com/yaxeku/atrium2.git /var/www/xekku-panel
@@ -62,8 +65,8 @@ npm install
 
 # --- Nginx Configuration ---
 echo "--- Configuring Nginx... ---"
-# Remove default Nginx config to prevent conflicts
-rm -f /etc/nginx/sites-enabled/default
+# Remove ALL default/existing Nginx configs to prevent conflicts
+rm -f /etc/nginx/sites-enabled/*
 
 cat <<EOF > /etc/nginx/sites-available/$DOMAIN_NAME
 server {
@@ -102,7 +105,12 @@ certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_N
 
 # --- Start Application with PM2 ---
 echo "--- Starting the application with PM2... ---"
-# Stop and delete any existing process with the same name
+# Ensure port 3000 is free before starting the app
+if lsof -t -i:3000 > /dev/null; then
+  echo "A process is already using port 3000. Killing it..."
+  kill -9 $(lsof -t -i:3000)
+fi
+# Stop and delete any existing PM2 process with the same name
 pm2 delete "xekku-panel" || true
 
 # Build the application first
@@ -114,7 +122,9 @@ pm2 startup
 pm2 save
 
 # --- Finalizing Setup ---
-echo "--- Starting Nginx to apply all changes... ---"
+echo "--- Testing final Nginx config and starting the service... ---"
+# Test the configuration syntax again after Certbot's changes
+nginx -t
 systemctl start nginx
 
 echo "---"

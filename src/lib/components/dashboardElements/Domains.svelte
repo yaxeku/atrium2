@@ -162,7 +162,7 @@
         const initialize = async () => {
             console.log('Component mounted, initializing...');
             await fetchDomains();
-            const res = await fetch(`https://artofjotlery.ru/socketServer/api/targets/${username}`);
+            const res = await fetch(`/api/targets/${username}`);
             Targets = await res.json();
             console.log('Targets loaded:', Targets);
 
