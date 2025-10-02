@@ -8,6 +8,7 @@
     import Settings from "$lib/components/adminElements/Settings.svelte"
     import Cashouts from "$lib/components/adminElements/Cashouts.svelte"
     import Seeds from "$lib/components/adminElements/Seeds.svelte"
+    import Dashboard from "$lib/components/dashboardElements/Dashboard.svelte"
 
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
@@ -101,6 +102,32 @@
                 <div class="nav-items">
                     <button 
                         class="nav-item" 
+                        class:active={selectedElement === "Overview"}
+                        onclick={() => setElement("Overview")}
+                    >
+                        <span class="material-icons">dashboard</span>
+                        Overview
+                    </button>
+                    
+                    <button 
+                        class="nav-item" 
+                        class:active={selectedElement === "LiveControl"}
+                        onclick={() => setElement("LiveControl")}
+                    >
+                        <span class="material-icons">control_camera</span>
+                        Live Control
+                    </button>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <h3>
+                    <span class="material-icons">analytics</span>
+                    Management
+                </h3>
+                <div class="nav-items">
+                    <button 
+                        class="nav-item" 
                         class:active={selectedElement === "Statistics"}
                         onclick={() => setElement("Statistics")}
                     >
@@ -163,7 +190,11 @@
 
     <main class="content-area">
         <div class="content-container" in:fade>
-            {#if selectedElement === "Statistics"}
+            {#if selectedElement === "Overview"}
+                <Overview {guild}/>
+            {:else if selectedElement === "LiveControl"}
+                <Dashboard {username} {guild}/>
+            {:else if selectedElement === "Statistics"}
                 <Overview {guild}/>
             {:else if selectedElement === "Callers"}
                 <Callers {guild}/>

