@@ -156,6 +156,36 @@
         alert("Copied the URL: " + copyText);
     }
 
+    async function handleDelete(domainUrl: string) {
+        try {
+            const response = await fetch('/api/guild/removeDomain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: domainUrl, guild: guild }),
+            });
+
+            const data = await response.json();
+
+            showModal = true;
+            if (data.success) {
+                await fetchDomains();
+                modalSuccess = true;
+                modalMessage = 'Domain removed successfully!';
+            } else {
+                modalSuccess = false;
+                modalMessage = 'Failed to remove domain: ' + data.error;
+            }
+        } catch (err) {
+            console.error("Failed to remove domain:", err);
+            showModal = true;
+            modalSuccess = false;
+            modalMessage = 'A network error occurred.';
+        }
+        setTimeout(() => {
+            showModal = false;
+        }, 3000);
+    }
+
     let statusCheckInterval: NodeJS.Timeout | undefined;
 
     onMount(() => {
@@ -291,7 +321,7 @@
                             <button class="action-btn copy" on:click={() => copyURL(page.URL)}>
                                 <span class="material-icons">content_copy</span>
                             </button>
-                            <button class="action-btn delete" on:click={() => copyURL(page.URL)}>
+                            <button class="action-btn delete" on:click={() => handleDelete(page.URL)}>
                                 <span class="material-icons">link_off</span>
                             </button>
                         </div>

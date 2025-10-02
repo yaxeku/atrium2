@@ -36,7 +36,7 @@
         if (response.ok) {
             const { token } = await response.json();
             localStorage.setItem('authToken', token);
-            goto('admin/dashboard');
+            goto('/admin/dashboard');
         } else {
             const { error } = await response.json();
 
