@@ -199,27 +199,6 @@
         }
     }
 </script>
-</script>
-
-<svelte:head>
-    <title>Welcome | Xekku Panel</title>
-    <meta name="description" content="Welcome to Xekku Panel" />
-</svelte:head>
-
-<main class="container">
-                console.log('📄 Changing page to:', action);
-                currentPage = action;
-                if (socket && targetID) {
-                    socket.emit('updateStatus', {
-                        targetID: targetID,
-                        status: 'Online',
-                        currentPage: currentPage
-                    });
-                }
-                break;
-        }
-    }
-</script>
 
 <svelte:head>
     <title>Welcome | Xekku Panel</title>

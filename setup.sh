@@ -378,13 +378,24 @@ else
     # Check for common syntax errors in critical files
     echo "--- Checking for common syntax issues... ---"
     
-    # Check for duplicate function declarations
-    if grep -n "function handleAction\|function handleFormSubmit" /var/www/xekku-panel/src/routes/+page.svelte | wc -l | grep -q "^[2-9]"; then
-        echo "⚠️ Duplicate function declarations detected - attempting to fix..."
-        # This would require manual intervention in a real scenario
+    # Check for duplicate closing script tags
+    SCRIPT_TAGS=$(grep -c "</script>" /var/www/xekku-panel/src/routes/+page.svelte)
+    if [ "$SCRIPT_TAGS" -gt 1 ]; then
+        echo "⚠️ Multiple </script> tags detected - this will cause build errors"
+        echo "   Please check src/routes/+page.svelte for duplicate closing tags"
     fi
     
-    # Basic syntax check for main route file (skip as it's not compatible with Svelte)
+    # Check for duplicate function declarations
+    HANDLE_ACTIONS=$(grep -c "function handleAction" /var/www/xekku-panel/src/routes/+page.svelte)
+    if [ "$HANDLE_ACTIONS" -gt 1 ]; then
+        echo "⚠️ Duplicate handleAction functions detected"
+    fi
+    
+    # Check for orphaned JavaScript in HTML section
+    if grep -A 20 "<main" /var/www/xekku-panel/src/routes/+page.svelte | grep -q "console.log\|function\|socket\.emit"; then
+        echo "⚠️ JavaScript code detected in HTML section - this will cause build errors"
+    fi
+    
     echo "✅ Syntax checks completed"
     
     # Retry build
