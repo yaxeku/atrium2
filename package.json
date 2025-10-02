@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"start": "npm run build && concurrently \"node build/index.js\" \"node server.js\" \"npm run bot\"",
+		"start": "npm run build && concurrently \"node build/index.js\" \"npm run bot\"",
 		"preview": "vite preview",
 		"bot": "node bot.js",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
