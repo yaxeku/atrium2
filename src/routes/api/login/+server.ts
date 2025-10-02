@@ -41,12 +41,15 @@ export async function POST({ request, cookies }: RequestEvent) {
 
         const token = jwt.sign({ userName }, SECRET_KEY, { expiresIn: '1h' });
 
+        const domain = process.env.NODE_ENV === 'production' ? process.env.DOMAIN_NAME : undefined;
+        
         cookies.set('authToken', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 3600, 
-            path: '/' 
+            sameSite: 'lax',  // Changed from 'strict' to 'lax' for better compatibility
+            maxAge: 3600,     // 1 hour in seconds
+            path: '/',
+            domain: domain    // Set domain in production
         });
 
         return json({ success: true, token });
