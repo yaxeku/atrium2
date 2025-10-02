@@ -192,7 +192,7 @@
         const initialize = async () => {
             console.log('Component mounted, initializing...');
             await fetchDomains();
-            const res = await fetch(`/api/targets/${username}`);
+            const res = await fetch(`/api/targets/user/${username}`);
             Targets = await res.json();
             console.log('Targets loaded:', Targets);
 
