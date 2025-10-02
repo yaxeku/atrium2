@@ -27,28 +27,33 @@
         console.log("USER: " + userName)
         console.log("PASS: " + passWord)
 
-        const response = await fetch('/admin/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userName, passWord }),
-        });
+        try {
+            const response = await fetch('/admin/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userName, passWord }),
+            });
 
-        if (response.ok) {
-            const { token } = await response.json();
-            localStorage.setItem('authTokenAdmin', token);
-            goto('/admin/dashboard');
-        } else {
-            const { error } = await response.json();
+            if (response.ok) {
+                const { token } = await response.json();
+                localStorage.setItem('authTokenAdmin', token);
+                goto('/admin/dashboard');
+            } else {
+                const { error } = await response.json();
 
-            if (errorMsgIndex > errorMessages.length - 1) {
-                errorMsgIndex = 0;
-                currentErrorMessage = errorMessages[errorMessages.length - 1];
+                if (errorMsgIndex > errorMessages.length - 1) {
+                    errorMsgIndex = 0;
+                    currentErrorMessage = errorMessages[errorMessages.length - 1];
+                }
+
+                currentErrorMessage = errorMessages[errorMsgIndex]
+                errorMsgIndex++;
+
+                invalidCredentials = [userName, passWord];
             }
-
-            currentErrorMessage = errorMessages[errorMsgIndex]
-            errorMsgIndex++;
-
-            invalidCredentials = [userName, passWord];
+        } catch (err) {
+            console.error("Login fetch failed:", err);
+            currentErrorMessage = "A network error occurred. Please try again.";
         }
     }
 
