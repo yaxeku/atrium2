@@ -375,12 +375,26 @@ else
     npm ci
     npx svelte-kit sync
     
+    # Check for common syntax errors in critical files
+    echo "--- Checking for common syntax issues... ---"
+    
+    # Basic syntax check for main route file
+    if node -c src/routes/+page.svelte 2>/dev/null; then
+        echo "✅ Main route file syntax appears valid"
+    else
+        echo "⚠️ Potential syntax issues detected in route files"
+    fi
+    
     # Retry build
     if npm run build; then
         echo "✅ Build completed successfully after recovery"
     else
         echo "❌ Build failed after recovery attempt"
-        echo "Please check the application code for syntax errors"
+        echo "📋 Troubleshooting steps:"
+        echo "   1. Check syntax errors in src/routes/+page.svelte"
+        echo "   2. Verify all imports and exports are correct"
+        echo "   3. Ensure no orphaned code outside script tags"
+        echo "   4. Check console for specific error details"
         exit 1
     fi
 fi
