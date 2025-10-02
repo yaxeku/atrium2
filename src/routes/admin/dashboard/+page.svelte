@@ -57,10 +57,10 @@
                 fetchGuild(username);
             } catch (error) {
                 console.error("Error decoding token:", error);
-                goto('/admin/login');
+                goto('login');
             }
         } else {
-            goto('/admin/login');
+            goto('login');
         }
 
         setTimeout(() => {

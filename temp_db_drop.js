@@ -9,7 +9,7 @@ const { Pool } = pg;
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
-    database: 'postgres', // Connect to the default db, not the one we want to drop
+    database: process.env.DB_DATABASE, // Connect to the default db, not the one we want to drop
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
 });

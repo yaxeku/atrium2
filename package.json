@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "concurrently \"vite dev\" \"node server.js\" \"npm run bot\"",
+		"dev": "vite dev",
 		"build": "vite build",
 		"start": "npm run build && concurrently \"node build/index.js\" \"node server.js\" \"npm run bot\"",
 		"preview": "vite preview",

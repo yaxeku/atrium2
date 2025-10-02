@@ -193,11 +193,7 @@
     .white {
         color: #4CF485 !important;
     }
-
-    .darkText {
-        color: #13C4A3;
-    }
-
+    
     a {
         color: #13C4A3;
         text-decoration: none;

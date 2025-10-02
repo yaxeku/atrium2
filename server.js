@@ -161,6 +161,6 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(process.env.PORT, '0.0.0.0', () => {
+server.listen(process.env.PORT, 'localhost', () => {
   console.log(`Server listening on port ${process.env.PORT}`);
 });
